@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyConnect — Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --surface: rgba(255,255,255,0.05);
+    --surface2: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c6aff;
+    --accent2: #00e5c0;
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,0.5);
+    --danger: #ff5e7a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(6,6,18,0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 60px;
+  }
+
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -.3px; }
+  .logo span { color: var(--accent); }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+  .online-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,229,192,0.1);
+    border: 1px solid rgba(0,229,192,0.2);
+    border-radius: 100px;
+    padding: 4px 12px;
+    font-size: 12px; color: var(--accent2);
+  }
+  .live-dot { width: 7px; height: 7px; background: var(--accent2); border-radius: 50%; animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .user-chip {
+    background: rgba(124,106,255,0.12);
+    border: 1px solid rgba(124,106,255,0.25);
+    border-radius: 100px;
+    padding: 5px 14px 5px 8px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+  }
+
+  .avatar {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+
+  .btn-logout {
+    background: rgba(255,94,122,0.1);
+    border: 1px solid rgba(255,94,122,0.25);
+    color: var(--danger);
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-logout:hover { background: var(--danger); color: white; }
+
+  /* ── MAIN ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 40px 40px 80px; }
+
+  /* WELCOME SECTION */
+  .welcome-section { margin-bottom: 40px; }
+
+  .greeting {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(26px, 4vw, 38px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+  .greeting .grad {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .welcome-sub { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+  /* STATS ROW */
+  .stats-row {
+    display: flex; gap: 12px; margin: 24px 0 40px;
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    min-width: 140px;
+    flex: 1;
+  }
+
+  .stat-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px; font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .stat-lbl { font-size: 12px; color: var(--muted); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -.3px;
+    margin-bottom: 6px;
+  }
+  .section-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+
+  /* ── SUBJECT GRID ── */
+  .subject-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+
+  .subject-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all .22s;
+    position: relative;
+    overflow: hidden;
+  }
+  .subject-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(124,106,255,0.08), transparent);
+    opacity: 0;
+    transition: opacity .22s;
+  }
+  .subject-card:hover { border-color: rgba(124,106,255,0.4); transform: translateY(-3px); }
+  .subject-card:hover::before { opacity: 1; }
+  .subject-card.selected {
+    border-color: var(--accent);
+    background: rgba(124,106,255,0.12);
+  }
+  .subject-card.selected::before { opacity: 1; }
+  .subject-card.selected .check { opacity: 1; }
+
+  .check {
+    position: absolute; top: 10px; right: 10px;
+    width: 20px; height: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  .subject-emoji { font-size: 26px; margin-bottom: 10px; }
+  .subject-name { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .subject-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+  /* CATEGORY HEADERS */
+  .cat-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin: 28px 0 14px;
+  }
+
+  /* ── RANDOM / QUICK DOUBT ── */
+  .special-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+
+  .special-card {
+    border-radius: 16px;
+    padding: 22px;
+    cursor: pointer;
+    transition: all .22s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .special-card.random {
+    background: linear-gradient(135deg, rgba(124,106,255,0.15), rgba(124,106,255,0.05));
+    border: 1px solid rgba(124,106,255,0.3);
+  }
+  .special-card.random:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(124,106,255,0.15); }
+
+  .special-card.doubt {
+    background: linear-gradient(135deg, rgba(0,229,192,0.12), rgba(0,229,192,0.04));
+    border: 1px solid rgba(0,229,192,0.25);
+  }
+  .special-card.doubt:hover { border-color: var(--accent2); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,229,192,0.12); }
+
+  .special-icon { font-size: 32px; margin-bottom: 12px; }
+  .special-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .special-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .special-tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    padding: 3px 10px;
+    border-radius: 100px;
+  }
+  .random .special-tag { background: rgba(124,106,255,0.2); color: var(--accent); }
+  .doubt .special-tag { background: rgba(0,229,192,0.15); color: var(--accent2); }
+
+  /* ── START BUTTON ── */
+  .start-section {
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    padding: 24px 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .selected-display {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 14px;
+  }
+  .selected-display .sdlbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .selected-display .sdval { font-weight: 500; color: var(--text); }
+  .selected-display .sdval.empty { color: var(--muted); font-style: italic; }
+
+  .btn-start {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 14px 36px;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .btn-start:hover:not(:disabled) { background: #9580ff; transform: translateY(-2px); box-shadow: 0 10px 28px rgba(124,106,255,.35); }
+  .btn-start:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* RECENT SESSIONS */
+  .recent-row {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .recent-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .18s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .recent-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 0 16px; }
+    .main { padding: 24px 16px 100px; }
+    .special-row { grid-template-columns: 1fr; }
+    .subject-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .stats-row { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">Study<span>Connect</span></div>
+  <div class="topbar-right">
+    <div class="online-badge">
+      <span class="live-dot"></span>
+      <span id="onlineCount">0 Online</span>
+    </div>
+    <div class="user-chip">
+      <div class="avatar" id="topAvatar">S</div>
+      <span id="topName">Student</span>
+    </div>
+    <button class="btn-logout" onclick="logout()">Sign Out</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- WELCOME -->
+  <div class="welcome-section">
+    <div class="greeting">Hey, <span class="grad" id="greetName">Student</span> 👋</div>
+    <p class="welcome-sub">Choose a subject below and find a study partner instantly. Pick one topic or go random!</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-val" id="statOnline">—</div>
+      <div class="stat-lbl">Students Online</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">5+</div>
+      <div class="stat-lbl">Subject Categories</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">~10s</div>
+      <div class="stat-lbl">Avg Match Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">∞</div>
+      <div class="stat-lbl">Sessions Available</div>
+    </div>
+  </div>
+
+  <!-- SPECIAL OPTIONS -->
+  <div class="section-title">Quick Options</div>
+  <p class="section-sub">Not sure what to study? Jump in randomly or get help with a quick doubt.</p>
+
+  <div class="special-row">
+    <div class="special-card random" onclick="selectSpecial('random')">
+      <div class="special-icon">🎲</div>
+      <div class="special-title">Random Match</div>
+      <div class="special-desc">Connect with any student currently online — no subject filter, just study together.</div>
+      <span class="special-tag">Any subject</span>
+    </div>
+    <div class="special-card doubt" onclick="selectSpecial('doubt')">
+      <div class="special-icon">❓</div>
+      <div class="special-title">Quick Doubt</div>
+      <div class="special-desc">Have a one-off question? Connect with anyone available to clarify your doubt fast.</div>
+      <span class="special-tag">Open to all</span>
+    </div>
+  </div>
+
+  <!-- SCHOOL / BASIC SUBJECTS -->
+  <div class="cat-header">📚 School &amp; Basic Subjects</div>
+  <div class="subject-grid" id="grid-basic">
+    <div class="subject-card" onclick="selectSubject(this, 'Mathematics')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">📐</div>
+      <div class="subject-name">Mathematics</div>
+      <div class="subject-desc">Algebra, calculus, geometry &amp; more</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Physics')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">⚛️</div>
+      <div class="subject-name">Physics</div>
+      <div class="subject-desc">Mechanics, waves, thermodynamics</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Chemistry')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🧪</div>
+      <div class="subject-name">Chemistry</div>
+      <div class="subject-desc">Organic, inorganic &amp; physical chem</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Biology')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🧬</div>
+      <div class="subject-name">Biology</div>
+      <div class="subject-desc">Cell biology, genetics, ecology</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'English')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">📝</div>
+      <div class="subject-name">English</div>
+      <div class="subject-desc">Grammar, writing, literature</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'History')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🏛️</div>
+      <div class="subject-name">History</div>
+      <div class="subject-desc">World history, civics, geography</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Economics')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">📊</div>
+      <div class="subject-name">Economics</div>
+      <div class="subject-desc">Micro, macro &amp; business studies</div>
+    </div>
+  </div>
+
+  <!-- CORE COLLEGE SUBJECTS -->
+  <div class="cat-header">🎓 Core College Subjects</div>
+  <div class="subject-grid" id="grid-college">
+    <div class="subject-card" onclick="selectSubject(this, 'Coding')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">💻</div>
+      <div class="subject-name">Coding</div>
+      <div class="subject-desc">Programming, DSA, web dev</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Artificial Intelligence')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🤖</div>
+      <div class="subject-name">Artificial Intelligence</div>
+      <div class="subject-desc">ML, deep learning, NLP</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Data Science')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">📈</div>
+      <div class="subject-name">Data Science</div>
+      <div class="subject-desc">Statistics, pandas, visualization</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Computer Networks')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🌐</div>
+      <div class="subject-name">Computer Networks</div>
+      <div class="subject-desc">TCP/IP, protocols, security</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Database Systems')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🗄️</div>
+      <div class="subject-name">Database Systems</div>
+      <div class="subject-desc">SQL, NoSQL, DBMS concepts</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Operating Systems')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">⚙️</div>
+      <div class="subject-name">Operating Systems</div>
+      <div class="subject-desc">Process management, memory, I/O</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Electronics')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🔌</div>
+      <div class="subject-name">Electronics</div>
+      <div class="subject-desc">Digital circuits, signals, VLSI</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Mechanical Engineering')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🔧</div>
+      <div class="subject-name">Mechanical Engg</div>
+      <div class="subject-desc">Thermodynamics, fluid mechanics</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Civil Engineering')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🏗️</div>
+      <div class="subject-name">Civil Engineering</div>
+      <div class="subject-desc">Structures, surveying, materials</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Management')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">📋</div>
+      <div class="subject-name">Management</div>
+      <div class="subject-desc">MBA, HR, marketing, finance</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Law')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">⚖️</div>
+      <div class="subject-name">Law</div>
+      <div class="subject-desc">Constitutional, criminal, corporate</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'Medicine')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🏥</div>
+      <div class="subject-name">Medicine</div>
+      <div class="subject-desc">Anatomy, pharmacology, pathology</div>
+    </div>
+  </div>
+
+  <!-- COMPETITIVE EXAMS -->
+  <div class="cat-header">🏆 Competitive Exams</div>
+  <div class="subject-grid" id="grid-exam">
+    <div class="subject-card" onclick="selectSubject(this, 'JEE Preparation')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🎯</div>
+      <div class="subject-name">JEE Prep</div>
+      <div class="subject-desc">IIT-JEE maths, physics, chemistry</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'NEET Preparation')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🩺</div>
+      <div class="subject-name">NEET Prep</div>
+      <div class="subject-desc">Biology, chemistry, physics</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'GATE Preparation')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🖥️</div>
+      <div class="subject-name">GATE Prep</div>
+      <div class="subject-desc">CS, ECE, ME, civil GATE exams</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'CAT Preparation')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">📚</div>
+      <div class="subject-name">CAT Prep</div>
+      <div class="subject-desc">Quant, verbal, DILR</div>
+    </div>
+    <div class="subject-card" onclick="selectSubject(this, 'UPSC Preparation')">
+      <div class="check">✓</div>
+      <div class="subject-emoji">🏛️</div>
+      <div class="subject-name">UPSC Prep</div>
+      <div class="subject-desc">GS, CSAT, optional subjects</div>
+    </div>
+  </div>
+
+  <!-- STICKY START BAR -->
+  <div class="start-section">
+    <div class="selected-display">
+      <div class="sdlbl">SELECTED SUBJECT</div>
+      <div class="sdval empty" id="selectedDisplay">No subject selected — pick one above</div>
+    </div>
+    <button class="btn-start" id="startBtn" disabled onclick="startSession()">
+      Find Study Partner →
+    </button>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  // Load user
+  const userData = JSON.parse(sessionStorage.getItem("user") || '{}')
+  if (!userData.username) { location.href = "login.html" }
+
+  const username = userData.username || "Student"
+  document.getElementById("greetName").textContent = username
+  document.getElementById("topName").textContent = username
+  document.getElementById("topAvatar").textContent = username[0].toUpperCase()
+
+  // Online count
+  const socket = io()
+  socket.on("online-count", n => {
+    document.getElementById("onlineCount").textContent = n + " Online"
+    document.getElementById("statOnline").textContent = n
+  })
+
+  // Subject selection
+  let selectedSubject = null
+
+  function selectSubject(card, subject) {
+    // Deselect all
+    document.querySelectorAll(".subject-card").forEach(c => c.classList.remove("selected"))
+    document.querySelectorAll(".special-card").forEach(c => c.classList.remove("selected"))
+
+    card.classList.add("selected")
+    selectedSubject = subject
+
+    document.getElementById("selectedDisplay").textContent = subject
+    document.getElementById("selectedDisplay").classList.remove("empty")
+    document.getElementById("startBtn").disabled = false
+  }
+
+  function selectSpecial(type) {
+    document.querySelectorAll(".subject-card").forEach(c => c.classList.remove("selected"))
+    document.querySelectorAll(".special-card").forEach(c => c.classList.remove("selected"))
+
+    event.currentTarget.classList.add("selected")
+
+    if (type === "random") {
+      selectedSubject = "Random"
+      document.getElementById("selectedDisplay").textContent = "🎲 Random Match — any subject"
+    } else {
+      selectedSubject = "Quick Doubt"
+      document.getElementById("selectedDisplay").textContent = "❓ Quick Doubt — open to all"
+    }
+    document.getElementById("selectedDisplay").classList.remove("empty")
+    document.getElementById("startBtn").disabled = false
+  }
+
+  function startSession() {
+    if (!selectedSubject) return
+    sessionStorage.setItem("subject", selectedSubject)
+    location.href = "dashboard.html"
+  }
+
+  function logout() {
+    fetch("/logout", { method: "POST" })
+    sessionStorage.clear()
+    location.href = "index.html"
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyConnect — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  :root {
+    --bg: #07071a;
+    --surface: rgba(255,255,255,0.05);
+    --surface2: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c6aff;
+    --accent2: #00e5c0;
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,0.45);
+    --danger: #ff5e7a;
+    --sent-bg: linear-gradient(135deg, #7c6aff, #5a4adc);
+    --recv-bg: rgba(255,255,255,0.07);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height: 56px;
+    min-height: 56px;
+    background: rgba(7,7,26,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 50;
+  }
+
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.3px;
+  }
+  .logo span { color: var(--accent); }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,229,192,0.1);
+    border: 1px solid rgba(0,229,192,0.25);
+    border-radius: 100px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent2);
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    background: var(--accent2);
+    border-radius: 50%;
+    animation: blink 2s infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  #onlineCount {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 4px 12px;
+  }
+
+  .user-chip {
+    background: rgba(124,106,255,0.15);
+    border: 1px solid rgba(124,106,255,0.25);
+    border-radius: 100px;
+    padding: 4px 12px 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .user-avatar {
+    width: 26px; height: 26px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .btn-icon {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.2s;
+  }
+  .btn-icon:hover { background: var(--surface2); border-color: rgba(255,255,255,0.15); }
+
+  /* ── MAIN ── */
+  .main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── VIDEO AREA ── */
+  .video-area {
+    flex: 1;
+    position: relative;
+    background: #000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #remoteVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Waiting overlay */
+  .waiting-overlay {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    gap: 20px;
+  }
+
+  .waiting-spinner {
+    width: 60px; height: 60px;
+    border: 3px solid rgba(124,106,255,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .waiting-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .waiting-sub { font-size: 14px; color: var(--muted); }
+
+  #localVideo {
+    position: absolute;
+    width: 200px;
+    aspect-ratio: 16/9;
+    bottom: 90px;
+    right: 16px;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.15);
+    object-fit: cover;
+    cursor: grab;
+    z-index: 5;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    transition: border-color 0.2s;
+  }
+  #localVideo:hover { border-color: var(--accent); }
+  #localVideo:active { cursor: grabbing; }
+
+  /* ── CONTROLS ── */
+  .controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+    background: rgba(7,7,26,0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 10px 16px;
+  }
+
+  .ctrl-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface2);
+    color: var(--text);
+    position: relative;
+  }
+
+  .ctrl-btn:hover { transform: scale(1.1); }
+
+  .ctrl-btn.active { background: rgba(255,94,122,0.2); }
+
+  .ctrl-btn.danger {
+    background: var(--danger);
+    width: 52px; height: 52px;
+    font-size: 20px;
+  }
+  .ctrl-btn.danger:hover { background: #ff3d5c; }
+
+  .ctrl-btn.whiteboard-btn {
+    background: rgba(124,106,255,0.2);
+  }
+  .ctrl-btn.whiteboard-btn:hover, .ctrl-btn.whiteboard-btn.on { background: var(--accent); }
+
+  .ctrl-label {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* ── SIDE PANEL ── */
+  .side-panel {
+    width: 320px;
+    min-width: 320px;
+    background: #0d0d25;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 14px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .tab-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transition: transform 0.2s;
+  }
+
+  .tab-btn.active { color: var(--text); }
+  .tab-btn.active::after { transform: scaleX(1); }
+
+  .tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .tab-content.active { display: flex; }
+
+  /* CHAT */
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  .system-msg {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 100px;
+    align-self: center;
+  }
+
+  .msg-bubble {
+    max-width: 82%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    position: relative;
+    word-break: break-word;
+  }
+
+  .msg-bubble.sent {
+    background: var(--sent-bg);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg-bubble.received {
+    background: var(--recv-bg);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .msg-time {
+    font-size: 10px;
+    opacity: 0.55;
+    margin-top: 4px;
+    text-align: right;
+  }
+
+  .chat-input-area {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  #msgInput {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    resize: none;
+    max-height: 100px;
+    transition: border-color 0.2s;
+  }
+  #msgInput:focus { border-color: var(--accent); }
+  #msgInput::placeholder { color: var(--muted); }
+
+  .send-btn {
+    width: 38px; height: 38px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: #9580ff; }
+
+  /* INFO TAB */
+  .info-panel {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .info-section { margin-bottom: 24px; }
+
+  .info-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+  }
+
+  .info-card-icon { font-size: 20px; }
+
+  .info-card-text strong {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .info-card-text span { font-size: 12px; color: var(--muted); }
+
+  .topic-tag {
+    display: inline-block;
+    background: rgba(124,106,255,0.15);
+    border: 1px solid rgba(124,106,255,0.3);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 4px 4px 0 0;
+  }
+
+  /* ── WHITEBOARD OVERLAY ── */
+  .whiteboard-overlay {
+    position: fixed;
+    inset: 56px 0 0 0;
+    background: rgba(0,0,0,0.96);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+  }
+
+  .whiteboard-overlay.open { display: flex; }
+
+  .wb-header {
+    height: 52px;
+    background: #0d0d25;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .wb-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .wb-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wb-tool-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .wb-tool-btn:hover, .wb-tool-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  .wb-color-picker {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .wb-color {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .wb-color:hover, .wb-color.selected { border-color: white; transform: scale(1.2); }
+
+  .wb-size-slider {
+    width: 80px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  #whiteboardCanvas {
+    flex: 1;
+    display: block;
+    cursor: crosshair;
+    background: #fff;
+  }
+
+  .wb-close-btn {
+    background: rgba(255,94,122,0.15);
+    border: 1px solid rgba(255,94,122,0.3);
+    border-radius: 8px;
+    color: var(--danger);
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .wb-close-btn:hover { background: var(--danger); color: white; }
+
+  /* NOTIFICATIONS */
+  .toast-container {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: #1a1a35;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    min-width: 240px;
+    animation: slideIn 0.3s ease;
+    pointer-events: all;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  .toast.success { border-color: rgba(0,229,192,0.3); }
+  .toast.warning { border-color: rgba(255,184,0,0.3); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">Study<span>Connect</span></div>
+    <div class="status-badge" id="connectionBadge">
+      <span class="status-dot"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span id="onlineCount">0 Online</span>
+    <div id="subjectChip" style="background:rgba(0,229,192,0.1);border:1px solid rgba(0,229,192,0.25);border-radius:100px;padding:4px 12px;font-size:12px;color:var(--accent2);cursor:pointer" onclick="changeSubject()" title="Change subject">📚 <span id="subjectLabel">—</span></div>
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <span id="userName">—</span>
+    </div>
+    <button class="btn-icon" onclick="changeSubject()" title="Change Subject">🔄</button>
+    <button class="btn-icon" onclick="confirmLogout()" title="Logout">🚪</button>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main">
+
+  <!-- VIDEO -->
+  <div class="video-area" id="videoArea">
+
+    <!-- Waiting overlay -->
+    <div class="waiting-overlay" id="waitingOverlay">
+      <div class="waiting-spinner"></div>
+      <div class="waiting-text" id="waitingText">Finding a study partner...</div>
+      <div class="waiting-sub" id="waitingSub">Matching you with someone studying the same topic</div>
+    </div>
+
+    <video id="remoteVideo" autoplay playsinline></video>
+    <video id="localVideo" autoplay muted playsinline></video>
+
+    <!-- Controls -->
+    <div class="controls" id="controls">
+      <button class="ctrl-btn" id="micBtn" onclick="toggleMic()" title="Mute">
+        🎤
+        <span class="ctrl-label">Mic</span>
+      </button>
+      <button class="ctrl-btn" id="camBtn" onclick="toggleCamera()" title="Camera">
+        📷
+        <span class="ctrl-label">Camera</span>
+      </button>
+      <button class="ctrl-btn" id="spkBtn" onclick="toggleSpeaker()" title="Speaker">
+        🔊
+        <span class="ctrl-label">Speaker</span>
+      </button>
+      <button class="ctrl-btn whiteboard-btn" id="wbBtn" onclick="toggleWhiteboard()" title="Whiteboard">
+        🖊️
+        <span class="ctrl-label">Board</span>
+      </button>
+      <button class="ctrl-btn" id="screenBtn" onclick="startScreen()" title="Share Screen">
+        🖥️
+        <span class="ctrl-label">Share</span>
+      </button>
+      <button class="ctrl-btn danger" onclick="skipPartner()" title="Skip">
+        ⏭️
+        <span class="ctrl-label">Skip</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div class="side-panel">
+
+    <div class="panel-tabs">
+      <button class="tab-btn active" id="tab-chat" onclick="switchTab('chat')">💬 Chat</button>
+      <button class="tab-btn" id="tab-info" onclick="switchTab('info')">ℹ️ Info</button>
+    </div>
+
+    <!-- CHAT TAB -->
+    <div class="tab-content active" id="content-chat">
+      <div class="chat-messages" id="messages">
+        <div class="system-msg">🔒 Messages are private and end when the session does</div>
+      </div>
+      <div class="chat-input-area">
+        <textarea id="msgInput" placeholder="Type a message..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+
+    <!-- INFO TAB -->
+    <div class="tab-content" id="content-info">
+      <div class="info-panel">
+        <div class="info-section">
+          <div class="info-label">Your Profile</div>
+          <div class="info-card">
+            <div class="info-card-icon">👤</div>
+            <div class="info-card-text">
+              <strong id="infoUsername">—</strong>
+              <span>Logged in</span>
+            </div>
+          </div>
+        </div>
+        <div class="info-section">
+          <div class="info-label">Study Topic</div>
+          <div id="infoInterest" class="topic-tag">—</div>
+        </div>
+        <div class="info-section">
+          <div class="info-label">Session</div>
+          <div class="info-card">
+            <div class="info-card-icon">🕐</div>
+            <div class="info-card-text">
+              <strong id="sessionTimer">00:00</strong>
+              <span>Session duration</span>
+            </div>
+          </div>
+        </div>
+        <div class="info-section">
+          <div class="info-label">Partner</div>
+          <div class="info-card">
+            <div class="info-card-icon">🎓</div>
+            <div class="info-card-text">
+              <strong id="partnerStatus">Waiting for match...</strong>
+              <span id="partnerSub">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="info-section">
+          <div class="info-label">Quick Actions</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="wb-tool-btn" style="width:100%;justify-content:center" onclick="toggleWhiteboard()">🖊️ Open Whiteboard</button>
+            <button class="wb-tool-btn" style="width:100%;justify-content:center" onclick="startScreen()">🖥️ Share Screen</button>
+            <button class="wb-tool-btn" style="width:100%;justify-content:center;background:rgba(255,94,122,0.15);border-color:rgba(255,94,122,0.3);color:#ff5e7a" onclick="skipPartner()">⏭️ Find New Partner</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- WHITEBOARD OVERLAY -->
+<div class="whiteboard-overlay" id="whiteboardOverlay">
+  <div class="wb-header">
+    <span class="wb-title">🖊️ Collaborative Whiteboard</span>
+    <div class="wb-tools">
+      <button class="wb-tool-btn active" id="drawTool" onclick="setTool('draw')">✏️ Draw</button>
+      <button class="wb-tool-btn" id="eraserTool" onclick="setTool('eraser')">🧹 Eraser</button>
+      <button class="wb-tool-btn" id="textTool" onclick="setTool('text')">T Text</button>
+      <div class="wb-color-picker" id="colorPicker">
+        <div class="wb-color selected" style="background:#000" onclick="setColor('#000')"></div>
+        <div class="wb-color" style="background:#7c6aff" onclick="setColor('#7c6aff')"></div>
+        <div class="wb-color" style="background:#ff5e7a" onclick="setColor('#ff5e7a')"></div>
+        <div class="wb-color" style="background:#00e5c0" onclick="setColor('#00e5c0')"></div>
+        <div class="wb-color" style="background:#ff9a00" onclick="setColor('#ff9a00')"></div>
+        <div class="wb-color" style="background:#3b82f6" onclick="setColor('#3b82f6')"></div>
+      </div>
+      <input type="range" class="wb-size-slider" id="brushSize" min="1" max="30" value="4">
+      <button class="wb-tool-btn" onclick="clearBoard()">🗑️ Clear</button>
+    </div>
+    <button class="wb-close-btn" onclick="toggleWhiteboard()">✕ Close</button>
+  </div>
+  <canvas id="whiteboardCanvas"></canvas>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ── USER DATA ──
+const userData = JSON.parse(sessionStorage.getItem("user") || '{"username":"Student","interest":"Coding"}')
+const selectedSubject = sessionStorage.getItem("subject") || userData.interest || "Random"
+document.getElementById("userName").textContent = userData.username
+document.getElementById("userAvatar").textContent = userData.username[0].toUpperCase()
+document.getElementById("infoUsername").textContent = userData.username
+document.getElementById("subjectLabel").textContent = selectedSubject
+
+function changeSubject() {
+  if (room) socket.emit("skip", room)
+  if (pc) { pc.close(); pc = null }
+  location.href = "home.html"
+}
+
+
+// ── SOCKET ──
+const socket = io()
+let room = null
+let localStream = null
+let pc = null
+let sessionStart = null
+let sessionTimerInterval = null
+
+// ── VIDEO ELEMENTS ──
+const localVideo = document.getElementById("localVideo")
+const remoteVideo = document.getElementById("remoteVideo")
+
+// ── STATE FLAGS ──
+let micOn = true, camOn = true, spkOn = true
+
+// ── START CAMERA ──
+async function startCamera() {
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    localVideo.srcObject = localStream
+    setStatus("Looking for partner...", "searching")
+    socket.emit("find-partner", selectedSubject)
+  } catch (err) {
+    showToast("⚠️ Camera/mic access denied. Some features may not work.", "warning")
+    setStatus("No camera access", "searching")
+    socket.emit("find-partner", selectedSubject)
+  }
+}
+
+startCamera()
+
+// ── MATCH ──
+socket.on("waiting", () => {
+  setStatus("Waiting for a partner...", "searching")
+  document.getElementById("waitingText").textContent = "Waiting for a study partner..."
+})
+
+socket.on("matched", ({ room: r, initiator }) => {
+  room = r
+  document.getElementById("waitingOverlay").style.display = "none"
+  setStatus("Connected 🎉", "connected")
+  document.getElementById("partnerStatus").textContent = "Connected!"
+  document.getElementById("partnerSub").textContent = "Study session active"
+  startSessionTimer()
+  startCall(initiator)
+  addSystemMsg("🎉 Study partner connected! Say hi!")
+  showToast("🎉 Partner found! Happy studying!", "success")
+})
+
+// ── WEBRTC ──
+function startCall(initiator) {
+  const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] }
+  pc = new RTCPeerConnection(config)
+
+  if (localStream) {
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream))
+  }
+
+  pc.ontrack = e => { remoteVideo.srcObject = e.streams[0] }
+
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit("ice-candidate", { room, candidate: e.candidate })
+  }
+
+  if (initiator) {
+    pc.createOffer().then(offer => {
+      pc.setLocalDescription(offer)
+      socket.emit("offer", { room, offer })
+    })
+  }
+}
+
+socket.on("offer", async (offer) => {
+  if (!pc) startCall(false)
+  await pc.setRemoteDescription(offer)
+  const answer = await pc.createAnswer()
+  await pc.setLocalDescription(answer)
+  socket.emit("answer", { room, answer })
+})
+
+socket.on("answer", (answer) => pc.setRemoteDescription(answer))
+
+socket.on("ice-candidate", (candidate) => {
+  if (pc) pc.addIceCandidate(candidate).catch(()=>{})
+})
+
+// ── PARTNER LEFT ──
+socket.on("partner-left", () => {
+  addSystemMsg("👋 Partner disconnected. Finding new match...")
+  showToast("Partner disconnected. Searching again...", "warning")
+  setStatus("Finding new partner...", "searching")
+  document.getElementById("waitingOverlay").style.display = "flex"
+  document.getElementById("waitingText").textContent = "Finding another partner..."
+  remoteVideo.srcObject = null
+  room = null
+  if (pc) { pc.close(); pc = null }
+  clearSessionTimer()
+  socket.emit("find-partner", selectedSubject)
+})
+
+// ── CHAT ──
+document.getElementById("msgInput").addEventListener("keypress", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault()
+    sendMessage()
+  }
+})
+
+function sendMessage() {
+  const input = document.getElementById("msgInput")
+  const text = input.value.trim()
+  if (!text || !room) return
+  socket.emit("chat", { room, message: text })
+  addMsg(text, "sent")
+  input.value = ""
+}
+
+socket.on("chat", text => {
+  addMsg(text, "received")
+  if (document.getElementById("tab-chat").classList.contains("active") === false) {
+    showToast("💬 New message from partner", "")
+  }
+})
+
+function addMsg(text, type) {
+  const msgs = document.getElementById("messages")
+  const div = document.createElement("div")
+  div.className = "msg-bubble " + type
+  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  div.innerHTML = `${text}<div class="msg-time">${time}</div>`
+  msgs.appendChild(div)
+  msgs.scrollTop = msgs.scrollHeight
+}
+
+function addSystemMsg(text) {
+  const msgs = document.getElementById("messages")
+  const div = document.createElement("div")
+  div.className = "system-msg"
+  div.textContent = text
+  msgs.appendChild(div)
+  msgs.scrollTop = msgs.scrollHeight
+}
+
+// ── CONTROLS ──
+function toggleMic() {
+  if (!localStream) return
+  const track = localStream.getAudioTracks()[0]
+  if (!track) return
+  micOn = !micOn
+  track.enabled = micOn
+  const btn = document.getElementById("micBtn")
+  btn.textContent = micOn ? "🎤" : "🔇"
+  btn.classList.toggle("active", !micOn)
+  btn.querySelector(".ctrl-label").textContent = micOn ? "Mic" : "Muted"
+}
+
+function toggleCamera() {
+  if (!localStream) return
+  const track = localStream.getVideoTracks()[0]
+  if (!track) return
+  camOn = !camOn
+  track.enabled = camOn
+  const btn = document.getElementById("camBtn")
+  btn.textContent = camOn ? "📷" : "🚫"
+  btn.classList.toggle("active", !camOn)
+  btn.querySelector(".ctrl-label").textContent = camOn ? "Camera" : "Off"
+}
+
+function toggleSpeaker() {
+  spkOn = !spkOn
+  remoteVideo.muted = !spkOn
+  const btn = document.getElementById("spkBtn")
+  btn.textContent = spkOn ? "🔊" : "🔇"
+  btn.classList.toggle("active", !spkOn)
+}
+
+async function startScreen() {
+  try {
+    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+    if (pc) {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === "video")
+      if (sender) sender.replaceTrack(screenStream.getVideoTracks()[0])
+    }
+    showToast("🖥️ Screen sharing started", "success")
+    screenStream.getVideoTracks()[0].onended = () => {
+      if (localStream && pc) {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video")
+        if (sender && localStream.getVideoTracks()[0]) sender.replaceTrack(localStream.getVideoTracks()[0])
+      }
+      showToast("Screen sharing stopped", "")
+    }
+  } catch (e) {
+    showToast("Screen share cancelled or failed", "warning")
+  }
+}
+
+function skipPartner() {
+  if (room) socket.emit("skip", room)
+  remoteVideo.srcObject = null
+  room = null
+  if (pc) { pc.close(); pc = null }
+  clearSessionTimer()
+  document.getElementById("waitingOverlay").style.display = "flex"
+  document.getElementById("waitingText").textContent = "Finding another partner..."
+  setStatus("Searching...", "searching")
+  document.getElementById("partnerStatus").textContent = "Looking for partner..."
+  document.getElementById("partnerSub").textContent = "—"
+  socket.emit("find-partner", selectedSubject)
+}
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"))
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"))
+  document.getElementById("tab-" + name).classList.add("active")
+  document.getElementById("content-" + name).classList.add("active")
+}
+
+// ── STATUS ──
+function setStatus(text, state) {
+  document.getElementById("statusText").textContent = text
+  const badge = document.getElementById("connectionBadge")
+  badge.style.background = state === "connected"
+    ? "rgba(0,229,192,0.1)" : "rgba(255,184,0,0.08)"
+  badge.style.borderColor = state === "connected"
+    ? "rgba(0,229,192,0.25)" : "rgba(255,184,0,0.2)"
+}
+
+// ── ONLINE COUNT ──
+socket.on("online-count", n => {
+  document.getElementById("onlineCount").textContent = n + " Online"
+})
+
+// ── SESSION TIMER ──
+function startSessionTimer() {
+  sessionStart = Date.now()
+  sessionTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - sessionStart) / 1000)
+    const m = String(Math.floor(elapsed / 60)).padStart(2, "0")
+    const s = String(elapsed % 60).padStart(2, "0")
+    document.getElementById("sessionTimer").textContent = m + ":" + s
+  }, 1000)
+}
+
+function clearSessionTimer() {
+  clearInterval(sessionTimerInterval)
+  document.getElementById("sessionTimer").textContent = "00:00"
+}
+
+// ── TOASTS ──
+function showToast(text, type) {
+  const container = document.getElementById("toastContainer")
+  const toast = document.createElement("div")
+  toast.className = "toast " + type
+  toast.textContent = text
+  container.appendChild(toast)
+  setTimeout(() => {
+    toast.style.animation = "fadeOut 0.3s ease forwards"
+    setTimeout(() => toast.remove(), 300)
+  }, 3500)
+}
+
+// ── LOGOUT ──
+function confirmLogout() {
+  if (confirm("Leave StudyConnect? Your current session will end.")) {
+    fetch("/logout", { method: "POST" })
+    sessionStorage.clear()
+    location.href = "index.html"
+  }
+}
+
+// ── DRAG LOCAL VIDEO ──
+let dragging = false, dragOX, dragOY
+
+localVideo.addEventListener("mousedown", e => {
+  dragging = true
+  dragOX = e.offsetX; dragOY = e.offsetY
+  e.preventDefault()
+})
+
+document.addEventListener("mousemove", e => {
+  if (!dragging) return
+  const area = document.getElementById("videoArea")
+  const rect = area.getBoundingClientRect()
+  localVideo.style.left = (e.clientX - rect.left - dragOX) + "px"
+  localVideo.style.top = (e.clientY - rect.top - dragOY) + "px"
+  localVideo.style.right = "auto"
+  localVideo.style.bottom = "auto"
+})
+
+document.addEventListener("mouseup", () => { dragging = false })
+
+// ────────────────────────────────────────────
+//  WHITEBOARD
+// ────────────────────────────────────────────
+const wbOverlay = document.getElementById("whiteboardOverlay")
+const wbCanvas = document.getElementById("whiteboardCanvas")
+const wbCtx = wbCanvas.getContext("2d")
+let wbOpen = false
+let wbTool = "draw"
+let wbColor = "#000"
+let wbSize = 4
+let wbDrawing = false
+let lastX = 0, lastY = 0
+
+function resizeCanvas() {
+  const imgData = wbCtx.getImageData(0, 0, wbCanvas.width, wbCanvas.height)
+  wbCanvas.width = wbOverlay.clientWidth
+  wbCanvas.height = wbOverlay.clientHeight - 52
+  wbCtx.putImageData(imgData, 0, 0)
+}
+
+function toggleWhiteboard() {
+  wbOpen = !wbOpen
+  wbOverlay.classList.toggle("open", wbOpen)
+  document.getElementById("wbBtn").classList.toggle("on", wbOpen)
+  if (wbOpen) {
+    setTimeout(resizeCanvas, 50)
+  }
+}
+
+window.addEventListener("resize", () => { if (wbOpen) resizeCanvas() })
+
+function setTool(t) {
+  wbTool = t
+  document.querySelectorAll("[id$='Tool']").forEach(b => b.classList.remove("active"))
+  document.getElementById(t + "Tool").classList.add("active")
+}
+
+function setColor(c) {
+  wbColor = c
+  document.querySelectorAll(".wb-color").forEach(el => el.classList.remove("selected"))
+  event.target.classList.add("selected")
+}
+
+document.getElementById("brushSize").addEventListener("input", e => {
+  wbSize = parseInt(e.target.value)
+})
+
+function clearBoard() {
+  wbCtx.clearRect(0, 0, wbCanvas.width, wbCanvas.height)
+  if (room) socket.emit("clear-board", { room })
+}
+
+// Draw events
+wbCanvas.addEventListener("mousedown", e => {
+  wbDrawing = true
+  ;[lastX, lastY] = [e.offsetX, e.offsetY]
+  if (wbTool === "text") {
+    const text = prompt("Enter text:")
+    if (text) {
+      wbCtx.fillStyle = wbColor
+      wbCtx.font = `${wbSize * 4 + 12}px DM Sans`
+      wbCtx.fillText(text, e.offsetX, e.offsetY)
+      if (room) socket.emit("draw", { room, type: "text", x: e.offsetX, y: e.offsetY, text, color: wbColor, size: wbSize })
+    }
+    wbDrawing = false
+  }
+})
+
+wbCanvas.addEventListener("mousemove", e => {
+  if (!wbDrawing || wbTool === "text") return
+  drawLine(lastX, lastY, e.offsetX, e.offsetY, wbColor, wbSize, wbTool === "eraser")
+  if (room) socket.emit("draw", { room, type: "line", x1: lastX, y1: lastY, x2: e.offsetX, y2: e.offsetY, color: wbColor, size: wbSize, eraser: wbTool === "eraser" })
+  ;[lastX, lastY] = [e.offsetX, e.offsetY]
+})
+
+wbCanvas.addEventListener("mouseup", () => { wbDrawing = false })
+wbCanvas.addEventListener("mouseleave", () => { wbDrawing = false })
+
+// Touch support
+wbCanvas.addEventListener("touchstart", e => {
+  e.preventDefault()
+  const t = e.touches[0]
+  const r = wbCanvas.getBoundingClientRect()
+  wbDrawing = true
+  lastX = t.clientX - r.left; lastY = t.clientY - r.top
+})
+
+wbCanvas.addEventListener("touchmove", e => {
+  e.preventDefault()
+  if (!wbDrawing) return
+  const t = e.touches[0]
+  const r = wbCanvas.getBoundingClientRect()
+  const x = t.clientX - r.left, y = t.clientY - r.top
+  drawLine(lastX, lastY, x, y, wbColor, wbSize, wbTool === "eraser")
+  if (room) socket.emit("draw", { room, type: "line", x1: lastX, y1: lastY, x2: x, y2: y, color: wbColor, size: wbSize, eraser: wbTool === "eraser" })
+  lastX = x; lastY = y
+})
+
+wbCanvas.addEventListener("touchend", () => { wbDrawing = false })
+
+function drawLine(x1, y1, x2, y2, color, size, eraser) {
+  wbCtx.beginPath()
+  wbCtx.moveTo(x1, y1)
+  wbCtx.lineTo(x2, y2)
+  wbCtx.strokeStyle = eraser ? "#fff" : color
+  wbCtx.lineWidth = eraser ? size * 4 : size
+  wbCtx.lineCap = "round"
+  wbCtx.lineJoin = "round"
+  wbCtx.stroke()
+}
+
+// Receive draw from partner
+socket.on("draw", data => {
+  if (data.type === "line") {
+    drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.size, data.eraser)
+  } else if (data.type === "text") {
+    wbCtx.fillStyle = data.color
+    wbCtx.font = `${data.size * 4 + 12}px DM Sans`
+    wbCtx.fillText(data.text, data.x, data.y)
+  }
+})
+
+socket.on("clear-board", () => {
+  wbCtx.clearRect(0, 0, wbCanvas.width, wbCanvas.height)
+})
+</script>
+</body>
+</html>

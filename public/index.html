@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyConnect — Learn Together</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --surface: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c6aff;
+    --accent2: #00e5c0;
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,0.5);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── CANVAS BG ── */
+  #bgCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 60px;
+    background: rgba(6,6,18,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+
+  .nav-links { display: flex; gap: 12px; align-items: center; }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .btn-ghost:hover { background: var(--surface); border-color: var(--accent); }
+
+  .btn-primary {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 9px 22px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: #9580ff; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,106,255,0.3); }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 100px 20px 60px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,106,255,0.12);
+    border: 1px solid rgba(124,106,255,0.3);
+    color: var(--accent);
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 28px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .pill::before { content: ''; width: 7px; height: 7px; background: var(--accent2); border-radius: 50%; animation: pulse 2s infinite; }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(42px, 7vw, 88px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  h1 .grad {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 520px;
+    line-height: 1.7;
+    margin-bottom: 40px;
+    font-weight: 300;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .btn-lg {
+    padding: 14px 32px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+
+  /* ── STATS ── */
+  .stats {
+    display: flex;
+    gap: 48px;
+    justify-content: center;
+    margin-top: 70px;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* ── FEATURES ── */
+  .features {
+    position: relative;
+    z-index: 1;
+    padding: 80px 60px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 52px;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .feat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .feat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(124,106,255,0.06), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feat-card:hover { border-color: rgba(124,106,255,0.3); transform: translateY(-4px); }
+  .feat-card:hover::before { opacity: 1; }
+
+  .feat-icon {
+    width: 48px; height: 48px;
+    background: rgba(124,106,255,0.15);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    margin-bottom: 18px;
+  }
+
+  .feat-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .feat-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── HOW IT WORKS ── */
+  .how {
+    position: relative;
+    z-index: 1;
+    padding: 60px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    margin-top: 40px;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .step-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    color: rgba(124,106,255,0.2);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .step-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* ── CTA ── */
+  .cta-section {
+    position: relative;
+    z-index: 1;
+    margin: 40px 60px 80px;
+    background: linear-gradient(135deg, rgba(124,106,255,0.15), rgba(0,229,192,0.08));
+    border: 1px solid rgba(124,106,255,0.25);
+    border-radius: 24px;
+    padding: 64px;
+    text-align: center;
+  }
+
+  .cta-section h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+
+  .cta-section p { color: var(--muted); margin-bottom: 32px; font-size: 16px; }
+
+  footer {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    .features, .how, .cta-section { padding: 40px 20px; }
+    .steps { grid-template-columns: 1fr; }
+    .stats { gap: 24px; }
+    .cta-section { margin: 20px; padding: 40px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<nav>
+  <div class="logo">Study<span>Connect</span></div>
+  <div class="nav-links">
+    <a href="login.html" class="btn-ghost">Sign In</a>
+    <a href="signup.html" class="btn-primary">Get Started</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="pill">Live Now — Students Studying Together</div>
+  <h1>Learn Better.<br><span class="grad">Together.</span></h1>
+  <p class="hero-sub">Match instantly with students who share your interests. Video study, real-time chat, and a collaborative whiteboard — all in one place.</p>
+  <div class="hero-btns">
+    <a href="signup.html" class="btn-primary btn-lg">Start Studying Free</a>
+    <a href="login.html" class="btn-ghost btn-lg">Sign In</a>
+  </div>
+  <div class="stats">
+    <div class="stat-item">
+      <div class="stat-num" id="liveCount">—</div>
+      <div class="stat-label">Students Online</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">20+</div>
+      <div class="stat-label">Study Topics</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">Connections Made</div>
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="section-label">Features</div>
+  <div class="section-title">Everything you need to study smarter</div>
+  <div class="cards-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📹</div>
+      <div class="feat-title">HD Video Sessions</div>
+      <div class="feat-desc">No downloads, no delays — just show up and study.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🎯</div>
+      <div class="feat-title">Smart Matching</div>
+      <div class="feat-desc">Get paired with someone studying the same topic — Math, Coding, Physics, AI and more.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🖊️</div>
+      <div class="feat-title">Shared Whiteboard</div>
+      <div class="feat-desc">A real-time collaborative canvas for equations, diagrams, brainstorming and problem solving.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">💬</div>
+      <div class="feat-title">Live Chat</div>
+      <div class="feat-desc">Send messages, share links and keep notes — all synced with your study partner in real time.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🖥️</div>
+      <div class="feat-title">Screen Sharing</div>
+      <div class="feat-desc">Share your screen instantly to walk through code, presentations, or study materials together.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⏭️</div>
+      <div class="feat-title">Skip & Rematch</div>
+      <div class="feat-desc">Not clicking? Skip with one tap and get matched with a new partner in seconds.</div>
+    </div>
+  </div>
+</section>
+
+<section class="how">
+  <div class="section-label">How It Works</div>
+  <div class="section-title">Three steps to your next study session</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">Create your account</div>
+      <div class="step-desc">Sign up in seconds. Pick your study interest and you're ready to connect.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Get matched instantly</div>
+      <div class="step-desc">Our system finds you a study partner with the same interest — usually in under 10 seconds.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">Study together</div>
+      <div class="step-desc">Video call, whiteboard, chat, screen share — your full study toolkit is ready.</div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <h2>Ready to study smarter?</h2>
+  <p>Join thousands of students already learning together on StudyConnect.</p>
+  <a href="signup.html" class="btn-primary btn-lg">Create Free Account</a>
+</section>
+
+<footer>© 2026 StudyConnect · Built for students, by students.</footer>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  // Animated canvas background
+  const canvas = document.getElementById("bgCanvas")
+  const ctx = canvas.getContext("2d")
+  let W, H, particles = []
+
+  function resize() {
+    W = canvas.width = window.innerWidth
+    H = canvas.height = window.innerHeight
+  }
+  resize()
+  window.addEventListener("resize", resize)
+
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: Math.random() * 1920,
+      y: Math.random() * 1080,
+      r: Math.random() * 1.5 + 0.5,
+      dx: (Math.random() - 0.5) * 0.3,
+      dy: (Math.random() - 0.5) * 0.3,
+      o: Math.random() * 0.5 + 0.2
+    })
+  }
+
+  function drawBg() {
+    ctx.clearRect(0, 0, W, H)
+    particles.forEach(p => {
+      p.x += p.dx; p.y += p.dy
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(124,106,255,${p.o})`
+      ctx.fill()
+    })
+    // Draw connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x
+        const dy = particles[i].y - particles[j].y
+        const d = Math.sqrt(dx * dx + dy * dy)
+        if (d < 120) {
+          ctx.beginPath()
+          ctx.moveTo(particles[i].x, particles[i].y)
+          ctx.lineTo(particles[j].x, particles[j].y)
+          ctx.strokeStyle = `rgba(124,106,255,${0.08 * (1 - d/120)})`
+          ctx.lineWidth = 0.5
+          ctx.stroke()
+        }
+      }
+    }
+    requestAnimationFrame(drawBg)
+  }
+  drawBg()
+
+  // Live count
+  const socket = io()
+  socket.on("online-count", n => {
+    document.getElementById("liveCount").textContent = n
+  })
+</script>
+</body>
+</html>

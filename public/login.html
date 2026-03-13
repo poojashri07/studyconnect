@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — StudyConnect</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060612;
+    --surface: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.1);
+    --accent: #7c6aff;
+    --accent2: #00e5c0;
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,0.5);
+    --error: #ff5e7a;
+    --success: #00e5c0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .left-panel {
+    background: linear-gradient(145deg, #0e0b2e, #120e35);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px;
+    position: relative;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+
+  .left-panel::before {
+    content: '';
+    position: absolute;
+    top: -200px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,229,192,0.1) 0%, transparent 70%);
+  }
+
+  .left-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -200px; left: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(124,106,255,0.12) 0%, transparent 70%);
+  }
+
+  .brand {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 60px;
+    position: relative; z-index: 1;
+  }
+  .brand span { color: var(--accent); }
+
+  .panel-tagline { position: relative; z-index: 1; }
+
+  .panel-tagline h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .grad {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .panel-tagline p {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.7;
+    max-width: 380px;
+    margin-bottom: 40px;
+  }
+
+  .testimonial {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 20px 24px;
+    position: relative; z-index: 1;
+    max-width: 380px;
+  }
+
+  .testimonial p { font-size: 14px; color: rgba(240,238,255,0.7); line-height: 1.6; margin-bottom: 12px; font-style: italic; }
+  .testimonial-author { font-size: 13px; color: var(--accent); font-weight: 500; }
+
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 40px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .auth-card h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+
+  .auth-card .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 36px;
+  }
+  .auth-card .subtitle a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+  .form-group { margin-bottom: 18px; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(240,238,255,0.7);
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+  }
+
+  .input-wrap { position: relative; }
+
+  .input-wrap .icon {
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 12px 14px 12px 42px;
+    outline: none;
+    transition: all 0.2s;
+  }
+
+  input:focus {
+    border-color: var(--accent);
+    background: rgba(124,106,255,0.06);
+    box-shadow: 0 0 0 3px rgba(124,106,255,0.1);
+  }
+
+  input::placeholder { color: rgba(240,238,255,0.25); }
+
+  .show-pass-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .show-pass-wrap input[type="checkbox"] {
+    width: 16px; height: 16px;
+    padding: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .show-pass-wrap span { font-size: 13px; color: var(--muted); }
+
+  .btn-submit {
+    width: 100%;
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 13px;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .btn-submit:hover { background: #9580ff; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,106,255,0.35); }
+  .btn-submit.loading { pointer-events: none; opacity: 0.7; }
+
+  .msg {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    display: none;
+  }
+  .msg.error { background: rgba(255,94,122,0.12); border: 1px solid rgba(255,94,122,0.3); color: var(--error); display: block; }
+  .msg.success { background: rgba(0,229,192,0.1); border: 1px solid rgba(0,229,192,0.3); color: var(--success); display: block; }
+
+  @media (max-width: 768px) {
+    body { grid-template-columns: 1fr; }
+    .left-panel { display: none; }
+    .right-panel { padding: 40px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="left-panel">
+  <div class="brand">Study<span>Connect</span></div>
+  <div class="panel-tagline">
+    <h2>Welcome<br><span class="grad">back.</span></h2>
+    <p>Pick up where you left off. Your next study partner is waiting for you right now.</p>
+  </div>
+  <div class="testimonial">
+    <p>"StudyConnect completely changes how you prepare for exams. Having someone to work through problems with makes everything click faster."</p>
+    <div class="testimonial-author">— Poojashri R S., Artificial Intelligence and Data Science Student</div>
+  </div>
+</div>
+
+<div class="right-panel">
+  <div class="auth-card">
+    <h1>Sign in</h1>
+    <p class="subtitle">No account? <a href="signup.html">Create one free</a></p>
+
+    <div class="form-group">
+      <label>Username</label>
+      <div class="input-wrap">
+        <span class="icon">👤</span>
+        <input id="username" type="text" placeholder="Your username">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <div class="input-wrap">
+        <span class="icon">🔑</span>
+        <input id="password" type="password" placeholder="Your password">
+      </div>
+      <label class="show-pass-wrap">
+        <input type="checkbox" id="showPass">
+        <span>Show password</span>
+      </label>
+    </div>
+
+    <button class="btn-submit" id="loginBtn" onclick="login()">Sign In</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+
+<script>
+  document.getElementById("showPass").addEventListener("change", function() {
+    document.getElementById("password").type = this.checked ? "text" : "password"
+  })
+
+  async function login() {
+    const btn = document.getElementById("loginBtn")
+    const username = document.getElementById("username").value.trim()
+    const password = document.getElementById("password").value
+
+    if (!username || !password) {
+      showMsg("Please fill in all fields.", "error"); return
+    }
+
+    btn.classList.add("loading")
+    btn.textContent = "Signing in..."
+
+    const res = await fetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    })
+    const data = await res.json()
+
+    btn.classList.remove("loading")
+    btn.textContent = "Sign In"
+
+    if (data.success) {
+      showMsg("✅ Welcome back! Loading home...", "success")
+      sessionStorage.setItem("user", JSON.stringify({ username: data.username, interest: data.interest }))
+      setTimeout(() => location.href = "home.html", 1200)
+    } else {
+      showMsg(data.message || "Invalid credentials.", "error")
+    }
+  }
+
+  function showMsg(text, type) {
+    const el = document.getElementById("msg")
+    el.textContent = text
+    el.className = "msg " + type
+  }
+
+  document.addEventListener("keypress", e => { if (e.key === "Enter") login() })
+</script>
+</body>
+</html>
