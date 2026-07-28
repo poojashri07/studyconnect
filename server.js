@@ -21,15 +21,38 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static("public"))
 
-mongoose.connect(process.env.MONGO_URI)
+const memoryUsers = []
+
+async function findUserByUsername(username) {
+  if (mongoose.connection.readyState === 1) {
+    return User.findOne({ username: username.trim() })
+  }
+
+  return memoryUsers.find(user => user.username === username.trim())
+}
+
+async function createUserRecord(userData) {
+  if (mongoose.connection.readyState === 1) {
+    const user = new User(userData)
+    await user.save()
+    return user
+  }
+
+  memoryUsers.push(userData)
+  return userData
+}
+
+mongoose.connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/studyconnect")
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ MongoDB Error:", err))
+
+const sessionStore = process.env.MONGO_URI ? MongoStore.create({ mongoUrl: process.env.MONGO_URI }) : undefined
 
 app.use(session({
   secret: process.env.SESSION_SECRET || "studyconnect-secret",
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI })
+  store: sessionStore
 }))
 
 /* ── AUTH ROUTES ── */
@@ -37,11 +60,11 @@ app.use(session({
 app.post("/register", async (req, res) => {
   const { username, password, interest } = req.body
   try {
-    const exists = await User.findOne({ username: username.trim() })
+    const trimmedUsername = username.trim()
+    const exists = await findUserByUsername(trimmedUsername)
     if (exists) return res.json({ success: false, message: "Username already taken" })
     const hashedPassword = await bcrypt.hash(password, 10)
-    const user = new User({ username: username.trim(), password: hashedPassword, interest })
-    await user.save()
+    await createUserRecord({ username: trimmedUsername, password: hashedPassword, interest })
     res.json({ success: true, message: "Account created!" })
   } catch (err) {
     res.json({ success: false, message: "Registration error" })
@@ -51,7 +74,7 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   const { username, password } = req.body
   try {
-    const user = await User.findOne({ username: username.trim() })
+    const user = await findUserByUsername(username)
     if (!user) return res.json({ success: false, message: "User not found" })
     const match = await bcrypt.compare(password, user.password)
     if (!match) return res.json({ success: false, message: "Incorrect password" })
