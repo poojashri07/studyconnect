@@ -1,0 +1,49 @@
+name: Deploy and Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      NODE_PATH: ${{ github.workspace }}/node_modules
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install exceljs --no-save
+
+      - name: Run frontend security scan
+        run: |
+          node StudyConnectE2E/scripts/generateWebSecuritySuite.js
+
+      - name: Enforce zero-critical policy
+        run: |
+          if grep -Eq 'Critical: [1-9][0-9]*' web-executive-summary.md; then
+            echo 'Critical findings detected.'
+            exit 1
+          fi
+
+      - name: Append summaries to step summary
+        if: always()
+        run: |
+          echo '## Frontend Security Summary' >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          cat web-executive-summary.md >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo '### Findings report' >> $GITHUB_STEP_SUMMARY
+          cat web-security-review.md >> $GITHUB_STEP_SUMMARY
