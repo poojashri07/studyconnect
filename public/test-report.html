@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyConnect Test Report</title>
+  <style>
+    :root {
+      --bg: #060612;
+      --panel: #101225;
+      --panel-2: #171b31;
+      --text: #f4f7ff;
+      --muted: #aab4d1;
+      --accent: #7c6aff;
+      --accent-2: #00e5c0;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .page { max-width: 1180px; margin: 0 auto; padding: 32px 20px 60px; }
+    .hero {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-radius: 20px;
+      padding: 28px;
+      color: white;
+      margin-bottom: 24px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    }
+    .hero h1 { margin: 0 0 8px; font-size: 32px; }
+    .hero p { margin: 0; font-size: 16px; opacity: 0.95; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .card { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 18px; }
+    .card h3 { margin: 0 0 10px; font-size: 18px; }
+    .metric { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+    .sub { color: var(--muted); font-size: 13px; }
+    .section { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; margin-bottom: 18px; }
+    .section h2 { margin-top: 0; font-size: 22px; }
+    .pill { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-left: 8px; }
+    .pill.ok { background: rgba(34,197,94,0.18); color: var(--ok); }
+    .pill.warn { background: rgba(245,158,11,0.18); color: var(--warn); }
+    .pill.danger { background: rgba(239,68,68,0.18); color: var(--danger); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    th { color: var(--muted); font-weight: 600; }
+    a { color: #8da5ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { margin: 8px 0 0 18px; }
+    .status-line { color: var(--accent-2); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>StudyConnect Test Execution Summary</h1>
+      <p>This page brings together the verified execution results, the generated reports, and the full 300-case test plan for quick access.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Verified automated runs</h3>
+        <div class="metric">4</div>
+        <div class="sub">Load test, backend security scan, web security scan, Selenium report generation</div>
+      </div>
+      <div class="card">
+        <h3>Planned test cases</h3>
+        <div class="metric">300</div>
+        <div class="sub">Functional, UI/UX, Validation, Unit, and Deployment categories</div>
+      </div>
+      <div class="card">
+        <h3>Load test throughput</h3>
+        <div class="metric">1,059.65 RPS</div>
+        <div class="sub">63,579 successful requests with 0 failures</div>
+      </div>
+      <div class="card">
+        <h3>Security posture</h3>
+        <div class="metric">0 critical</div>
+        <div class="sub">Backend and web scans both reported 0 critical and 0 high findings</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Verified execution results <span class="pill ok">Verified</span></h2>
+      <ul>
+        <li><strong>Load test:</strong> 63,579 successful requests, 0 failures, 1,059.65 requests/second, average response time 82.05 ms.</li>
+        <li><strong>Backend security scan:</strong> Critical 0, High 0, Low 14, score 72/100.</li>
+        <li><strong>Web security scan:</strong> Critical 0, High 0, Low 14, score 72/100.</li>
+        <li><strong>Selenium report:</strong> Report generated and stored in <a href="../tests/selenium/selenium-report.xlsx">tests/selenium/selenium-report.xlsx</a>.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Test case coverage matrix <span class="pill warn">Documented and ready</span></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Planned cases</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Functional testing</td><td>100</td><td class="status-line">Documented</td></tr>
+          <tr><td>UI/UX testing</td><td>80</td><td class="status-line">Documented</td></tr>
+          <tr><td>Validation testing</td><td>60</td><td class="status-line">Documented</td></tr>
+          <tr><td>Unit testing</td><td>40</td><td class="status-line">Documented</td></tr>
+          <tr><td>Deployment / deployable status</td><td>20</td><td class="status-line">Documented</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>300</strong></td><td class="status-line"><strong>300 cases prepared</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Report files and access links</h2>
+      <ul>
+        <li><a href="../tests/test-plan.md">Full 300-case test plan</a></li>
+        <li><a href="../executive-summary.md">Backend security executive summary</a></li>
+        <li><a href="../security-review.md">Backend security review</a></li>
+        <li><a href="../web-executive-summary.md">Web security executive summary</a></li>
+        <li><a href="../web-security-review.md">Web security review</a></li>
+        <li><a href="../findings.xlsx">Backend findings Excel</a></li>
+        <li><a href="../web-security-findings.xlsx">Web findings Excel</a></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
