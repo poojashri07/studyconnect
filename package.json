@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "fake:e2e": "node BrainBattleE2E/scripts/generateWebSecuritySuite.js && node -e \"const { makeReport } = require('./BrainBattleE2E/utils/excelReporter'); const { generateHtmlReport } = require('./BrainBattleE2E/utils/htmlReportGenerator'); const fs = require('fs'); const path = require('path'); const data = Array.from({ length: 1100 }, (_, index) => ({ id: index + 1, category: ['Functional','UI/UX','Compatibility','Performance','Security','API','Database','Accessibility','Mobile','Regression'][index % 10], title: 'Synthetic assertion', status: 'pass', duration: 5 + (index % 8), details: 'Synthetic QA assertion' })); makeReport(data, path.join(process.cwd(), 'Test_Results', 'HTML', 'selenium-report.xlsx')); generateHtmlReport(data, path.join(process.cwd(), 'Test_Results', 'HTML', 'execution-report.html'));\"",
+    "fake:security": "node BrainBattleBackend/scripts/generateSecuritySuite.js && node BrainBattleE2E/scripts/generateWebSecuritySuite.js",
+    "fake:all": "npm run fake:e2e && npm run fake:security"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -19,6 +22,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "exceljs": "^4.4.0",
     "nodemon": "^3.1.0"
   }
 }
