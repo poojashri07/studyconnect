@@ -1,0 +1,42 @@
+name: Load Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start application
+        run: |
+          npm start > app.log 2>&1 &
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:5000/ > /dev/null; then
+              echo "Server is ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run load test
+        env:
+          TARGET_URL: http://127.0.0.1:5000/
+          VUS: 100
+          DURATION_SECONDS: 60
+        run: npm run test:load
