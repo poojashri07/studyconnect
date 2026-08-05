@@ -8,10 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build-deploy-test:
     runs-on: ubuntu-latest
     env:
+      BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
       NODE_PATH: ${{ github.workspace }}/node_modules
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,27 +25,75 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: |
-          npm install
-          npm install exceljs --no-save
+        run: npm ci
 
-      - name: Run frontend security scan
+      - name: Build application
         run: |
-          node StudyConnectE2E/scripts/generateWebSecuritySuite.js
+          echo "No build step required for static site"
 
-      - name: Enforce zero-critical policy
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          destination_dir: /
+
+      - name: Wait for deployment
         run: |
-          if grep -Eq 'Critical: [1-9][0-9]*' web-executive-summary.md; then
-            echo 'Critical findings detected.'
+          for i in {1..20}; do
+            status=$(curl -o /dev/null -s -w "%{http_code}" "$BASE_URL")
+            if [ "$status" = "200" ]; then
+              echo "Deployment live"
+              exit 0
+            fi
+            echo "Waiting for deployment... ($status)"
+            sleep 6
+          done
+          echo "Deployment did not become available"
+          exit 1
+
+      - name: Verify deployment assets
+        run: |
+          html_status=$(curl -o /dev/null -s -w "%{http_code}" "$BASE_URL")
+          if [ "$html_status" != "200" ]; then
+            echo "Deployment verification failed"
             exit 1
           fi
+          echo "Deployment verification passed"
 
-      - name: Append summaries to step summary
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Run live Selenium automation
+        run: |
+          npm run test:automation
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          CHROME_BIN: /usr/bin/google-chrome
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: automation-artifacts
+          path: |
+            automation/reports/Automation_Test_Report.xlsx
+            automation/reports/execution-report.html
+            automation/reports/summary.md
+            automation/reports/execution-results.json
+            automation/screenshots/**
+            automation/logs/**
+
+      - name: Publish summary
         if: always()
         run: |
-          echo '## Frontend Security Summary' >> $GITHUB_STEP_SUMMARY
-          echo '' >> $GITHUB_STEP_SUMMARY
-          cat web-executive-summary.md >> $GITHUB_STEP_SUMMARY
-          echo '' >> $GITHUB_STEP_SUMMARY
-          echo '### Findings report' >> $GITHUB_STEP_SUMMARY
-          cat web-security-review.md >> $GITHUB_STEP_SUMMARY
+          echo "# Live GitHub Pages E2E Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment URL:** $BASE_URL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat automation/reports/summary.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Artifacts uploaded: automation-artifacts" >> $GITHUB_STEP_SUMMARY

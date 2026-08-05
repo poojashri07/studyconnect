@@ -3,6 +3,7 @@ const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const XLSX = require('xlsx');
 const { spawn } = require('child_process');
+const http = require('http');
 
 const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:5000';
 const reportPath = path.join(__dirname, 'selenium-report.xlsx');
@@ -76,9 +77,30 @@ async function buildDriver() {
   options.addArguments('--headless=new');
   options.addArguments('--no-sandbox');
   options.addArguments('--disable-dev-shm-usage');
+  options.addArguments('--disable-gpu');
   options.addArguments('--window-size=1440,1200');
+  options.addArguments('--remote-allow-origins=*');
   if (browserBinary) options.setChromeBinaryPath(browserBinary);
   return new Builder().forBrowser('chrome').setChromeOptions(options).build();
+}
+
+function waitForServer(url, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const attempt = () => {
+      http.get(url, (res) => {
+        res.resume();
+        resolve();
+      }).on('error', () => {
+        if (Date.now() - started > timeoutMs) {
+          reject(new Error('Server did not become ready in time'));
+        } else {
+          setTimeout(attempt, 1000);
+        }
+      });
+    };
+    attempt();
+  });
 }
 
 async function assertVisible(driver, selector) {
@@ -161,10 +183,11 @@ async function runCase(driver, testCase) {
 
 async function main() {
   let serverProcess;
+  let results = [];
   try {
     serverProcess = await startServer();
+    await waitForServer(baseUrl);
     const driver = await buildDriver();
-    const results = [];
     for (const testCase of generatedCases) {
       const outcome = await runCase(driver, testCase);
       results.push(outcome);
@@ -177,6 +200,11 @@ async function main() {
     console.log(`Generated ${results.length} Selenium cases and wrote ${reportPath}`);
   } catch (error) {
     console.error('Selenium suite failed:', error);
+    const fallback = [{ id: 0, name: 'Suite execution error', status: 'FAIL', details: error.message }];
+    const ws = XLSX.utils.json_to_sheet(fallback);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Selenium Results');
+    XLSX.writeFile(wb, reportPath);
   } finally {
     if (serverProcess) {
       serverProcess.kill();
