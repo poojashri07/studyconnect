@@ -16,6 +16,7 @@ jobs:
   build-deploy-test:
     runs-on: ubuntu-latest
     env:
+      RENDER_URL: ${{ secrets.RENDER_URL || '' }}
       BASE_URL: ${{ github.event.inputs.base_url || secrets.RENDER_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
       NODE_PATH: ${{ github.workspace }}/node_modules
 
@@ -37,7 +38,7 @@ jobs:
           echo "No build step required for static site"
 
       - name: Deploy to GitHub Pages
-        if: ${{ github.event.inputs.base_url == '' && !secrets.RENDER_URL }}
+        if: ${{ github.event.inputs.base_url == '' && env.RENDER_URL == '' }}
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
