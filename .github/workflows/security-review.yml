@@ -10,11 +10,16 @@ on:
 jobs:
   backend-security:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       NODE_PATH: ${{ github.workspace }}/node_modules
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,6 +43,30 @@ jobs:
             exit 1
           fi
 
+      - name: Commit security findings Excel into repo
+        if: always()
+        run: |
+          if [ -f findings.xlsx ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add findings.xlsx
+            if ! git diff --cached --quiet; then
+              git commit -m 'Update security findings Excel report [skip ci]'
+              git push origin HEAD:${{ github.ref_name }}
+            else
+              echo 'No changes to findings.xlsx to commit.'
+            fi
+          else
+            echo 'findings.xlsx not found.'
+          fi
+
+      - name: Upload security findings Excel
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-findings
+          path: findings.xlsx
+
       - name: Append summaries to step summary
         if: always()
         run: |
@@ -47,3 +76,5 @@ jobs:
           echo '' >> $GITHUB_STEP_SUMMARY
           echo '### Findings report' >> $GITHUB_STEP_SUMMARY
           cat security-review.md >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo '**Download the security findings Excel report via the workflow artifact `security-findings`.**' >> $GITHUB_STEP_SUMMARY
