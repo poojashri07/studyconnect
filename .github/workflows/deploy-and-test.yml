@@ -6,12 +6,17 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Live deployment URL to test'
+        required: false
+        default: ''
 
 jobs:
   build-deploy-test:
     runs-on: ubuntu-latest
     env:
-      BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+      BASE_URL: ${{ github.event.inputs.base_url || secrets.RENDER_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
       NODE_PATH: ${{ github.workspace }}/node_modules
 
     steps:
@@ -32,12 +37,17 @@ jobs:
           echo "No build step required for static site"
 
       - name: Deploy to GitHub Pages
+        if: ${{ github.event.inputs.base_url == '' && !secrets.RENDER_URL }}
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           publish_branch: gh-pages
           destination_dir: /
+
+      - name: Show target URL
+        run: |
+          echo "BASE_URL=$BASE_URL"
 
       - name: Wait for deployment
         run: |

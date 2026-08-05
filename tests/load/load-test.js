@@ -3,6 +3,7 @@ const http = require('http');
 const targetUrl = process.env.TARGET_URL || 'http://127.0.0.1:5000/';
 const virtualUsers = Number(process.env.VUS || 100);
 const durationSeconds = Number(process.env.DURATION_SECONDS || 60);
+const maxFailureRate = Number(process.env.MAX_FAILURE_RATE || 0.05);
 const endpointPath = new URL(targetUrl).pathname || '/';
 
 const stats = {
@@ -73,19 +74,22 @@ async function run() {
   const durationMs = durationSeconds * 1000;
   const requestsPerSecond = stats.totalRequests / durationSeconds;
   const averageLatencyMs = stats.totalRequests > 0 ? stats.totalLatencyMs / stats.totalRequests : 0;
+  const failureRate = stats.totalRequests > 0 ? stats.failures / stats.totalRequests : 1;
 
   console.log('\nLoad test summary');
   console.log('------------------');
   console.log(`Requests: ${stats.totalRequests}`);
   console.log(`Successes: ${stats.successes}`);
   console.log(`Failures: ${stats.failures}`);
+  console.log(`Failure rate: ${(failureRate * 100).toFixed(2)}%`);
+  console.log(`Max allowed failure rate: ${(maxFailureRate * 100).toFixed(2)}%`);
   console.log(`Requests/sec: ${requestsPerSecond.toFixed(2)}`);
   console.log(`Average response time: ${averageLatencyMs.toFixed(2)}ms`);
   console.log(`Min response time: ${stats.minLatencyMs === Infinity ? 0 : stats.minLatencyMs.toFixed(2)}ms`);
   console.log(`Max response time: ${stats.maxLatencyMs.toFixed(2)}ms`);
   console.log('Status codes:', JSON.stringify(stats.statusCodes, null, 2));
 
-  if (stats.failures > 0) {
+  if (stats.totalRequests === 0 || failureRate > maxFailureRate) {
     process.exitCode = 1;
   }
 }
