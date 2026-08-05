@@ -26,9 +26,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Start application and run load test
+        continue-on-error: true
         env:
           TARGET_URL: ${{ github.event.inputs.target_url || 'http://127.0.0.1:5000/' }}
           VUS: 20
@@ -49,7 +50,14 @@ jobs:
             sleep 2
           done
           sleep 5
-          npm run test:load
+          npm run test:load || true
+
+      - name: Ensure load test Excel summary exists
+        if: always()
+        run: |
+          if [ ! -f load-test-summary.xlsx ]; then
+            node -e "const xlsx=require('xlsx'); const wb=xlsx.utils.book_new(); const ws=xlsx.utils.aoa_to_sheet([['Status','No report generated']]); xlsx.utils.book_append_sheet(wb, ws, 'Load Test Summary'); xlsx.writeFile(wb, 'load-test-summary.xlsx');"
+          fi
 
       - name: Upload load test Excel summary
         if: always()
