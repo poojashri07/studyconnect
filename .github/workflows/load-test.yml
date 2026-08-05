@@ -35,8 +35,11 @@ jobs:
           DURATION_SECONDS: 30
           MAX_FAILURE_RATE: 0.05
         run: |
+          set -e
           npm start > app.log 2>&1 &
           SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+
           for i in {1..40}; do
             if curl -sf "$TARGET_URL" > /dev/null; then
               echo "Server is ready"
@@ -47,4 +50,10 @@ jobs:
           done
           sleep 5
           npm run test:load
-          kill $SERVER_PID || true
+
+      - name: Upload load test Excel summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-summary
+          path: load-test-summary.xlsx

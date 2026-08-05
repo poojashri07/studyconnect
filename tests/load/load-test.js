@@ -1,4 +1,5 @@
 const http = require('http');
+const xlsx = require('xlsx');
 
 const targetUrl = process.env.TARGET_URL || 'http://127.0.0.1:5000/';
 const virtualUsers = Number(process.env.VUS || 100);
@@ -93,6 +94,29 @@ async function run() {
   console.log(`Min response time: ${stats.minLatencyMs === Infinity ? 0 : stats.minLatencyMs.toFixed(2)}ms`);
   console.log(`Max response time: ${stats.maxLatencyMs.toFixed(2)}ms`);
   console.log('Status codes:', JSON.stringify(stats.statusCodes, null, 2));
+
+  const workbook = xlsx.utils.book_new();
+  const rows = [
+    ['Metric', 'Value'],
+    ['Target URL', targetUrl],
+    ['Virtual users', virtualUsers],
+    ['Duration seconds', durationSeconds],
+    ['Total requests', stats.totalRequests],
+    ['Successes', stats.successes],
+    ['Failures', stats.failures],
+    ['Failure rate (%)', (failureRate * 100).toFixed(2)],
+    ['Max allowed failure rate (%)', (maxFailureRate * 100).toFixed(2)],
+    ['Requests/sec', requestsPerSecond.toFixed(2)],
+    ['Average response time (ms)', averageLatencyMs.toFixed(2)],
+    ['Min response time (ms)', stats.minLatencyMs === Infinity ? 0 : stats.minLatencyMs.toFixed(2)],
+    ['Max response time (ms)', stats.maxLatencyMs.toFixed(2)],
+    ['Status codes', JSON.stringify(stats.statusCodes)]
+  ];
+  const sheet = xlsx.utils.aoa_to_sheet(rows);
+  xlsx.utils.book_append_sheet(workbook, sheet, 'Load Test Summary');
+  const excelPath = 'load-test-summary.xlsx';
+  xlsx.writeFile(workbook, excelPath);
+  console.log(`\nExcel summary written to ${excelPath}`);
 
   if (stats.totalRequests === 0 || failureRate > maxFailureRate) {
     process.exitCode = 1;
