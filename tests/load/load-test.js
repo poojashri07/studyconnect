@@ -26,8 +26,13 @@ function makeRequest() {
     const request = http.get(targetUrl, (res) => {
       res.resume();
       const latencyMs = Date.now() - startedAt;
+      const success = res.statusCode >= 200 && res.statusCode < 300;
       stats.totalRequests += 1;
-      stats.successes += 1;
+      if (success) {
+        stats.successes += 1;
+      } else {
+        stats.failures += 1;
+      }
       stats.totalLatencyMs += latencyMs;
       stats.minLatencyMs = Math.min(stats.minLatencyMs, latencyMs);
       stats.maxLatencyMs = Math.max(stats.maxLatencyMs, latencyMs);
