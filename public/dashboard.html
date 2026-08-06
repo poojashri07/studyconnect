@@ -665,6 +665,7 @@
     <div class="panel-tabs">
       <button class="tab-btn active" id="tab-chat" onclick="switchTab('chat')">💬 Chat</button>
       <button class="tab-btn" id="tab-info" onclick="switchTab('info')">ℹ️ Info</button>
+      <button class="tab-btn" id="tab-history" onclick="switchTab('history')">📜 History</button>
     </div>
 
     <!-- CHAT TAB -->
@@ -726,6 +727,21 @@
       </div>
     </div>
 
+    <div class="tab-content" id="content-history">
+      <div class="history-panel">
+        <div class="history-header">
+          <div>
+            <h3>Live History</h3>
+            <p>Recent study sessions are shown here automatically.</p>
+          </div>
+          <div id="historyCount" class="history-count">0 sessions</div>
+        </div>
+        <div id="historyList" class="history-list">
+          <div class="history-empty">No recent history yet. Start a match to see live updates.</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -779,6 +795,7 @@ let localStream = null
 let pc = null
 let sessionStart = null
 let sessionTimerInterval = null
+let historyEntries = []
 
 // ── VIDEO ELEMENTS ──
 const localVideo = document.getElementById("localVideo")
@@ -793,11 +810,11 @@ async function startCamera() {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     localVideo.srcObject = localStream
     setStatus("Looking for partner...", "searching")
-    socket.emit("find-partner", selectedSubject)
+    socket.emit("find-partner", { interest: selectedSubject, username: userData.username })
   } catch (err) {
     showToast("⚠️ Camera/mic access denied. Some features may not work.", "warning")
     setStatus("No camera access", "searching")
-    socket.emit("find-partner", selectedSubject)
+    socket.emit("find-partner", { interest: selectedSubject, username: userData.username })
   }
 }
 
@@ -869,17 +886,7 @@ socket.on("partner-left", () => {
   room = null
   if (pc) { pc.close(); pc = null }
   clearSessionTimer()
-  socket.emit("find-partner", selectedSubject)
-})
-
-// ── CHAT ──
-document.getElementById("msgInput").addEventListener("keypress", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
-  }
-})
-
+    socket.emit("find-partner", { interest: selectedSubject, username: userData.username })
 function sendMessage() {
   const input = document.getElementById("msgInput")
   const text = input.value.trim()
@@ -979,7 +986,7 @@ function skipPartner() {
   setStatus("Searching...", "searching")
   document.getElementById("partnerStatus").textContent = "Looking for partner..."
   document.getElementById("partnerSub").textContent = "—"
-  socket.emit("find-partner", selectedSubject)
+  socket.emit("find-partner", { interest: selectedSubject, username: userData.username })
 }
 
 // ── TABS ──
@@ -1004,6 +1011,41 @@ function setStatus(text, state) {
 socket.on("online-count", n => {
   document.getElementById("onlineCount").textContent = n + " Online"
 })
+
+socket.on("history-state", history => {
+  historyEntries = Array.isArray(history) ? history : []
+  renderHistory(historyEntries)
+})
+
+function renderHistory(entries) {
+  const list = document.getElementById("historyList")
+  const count = document.getElementById("historyCount")
+  list.innerHTML = ""
+  count.textContent = `${entries.length} session${entries.length === 1 ? "" : "s"}`
+
+  if (!entries.length) {
+    list.innerHTML = `<div class="history-empty">No recent history yet. Start a match to see live updates.</div>`
+    return
+  }
+
+  entries.forEach(entry => {
+    const item = document.createElement("div")
+    item.className = "history-item"
+    const when = new Date(entry.timestamp)
+    item.innerHTML = `
+      <div class="history-main">
+        <div class="history-title">${entry.users.join(" ↔ ")}</div>
+        <div class="history-sub">${entry.subject || "Random"}</div>
+      </div>
+      <div class="history-time">${formatHistoryTime(when)}</div>
+    `
+    list.appendChild(item)
+  })
+}
+
+function formatHistoryTime(date) {
+  return date.toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+}
 
 // ── SESSION TIMER ──
 function startSessionTimer() {
