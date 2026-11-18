@@ -665,6 +665,7 @@
     <div class="panel-tabs">
       <button class="tab-btn active" id="tab-chat" onclick="switchTab('chat')">💬 Chat</button>
       <button class="tab-btn" id="tab-info" onclick="switchTab('info')">ℹ️ Info</button>
+      <button class="tab-btn" id="tab-history" onclick="switchTab('history')">📜 History</button>
     </div>
 
     <!-- CHAT TAB -->
@@ -722,6 +723,21 @@
             <button class="wb-tool-btn" style="width:100%;justify-content:center" onclick="startScreen()">🖥️ Share Screen</button>
             <button class="wb-tool-btn" style="width:100%;justify-content:center;background:rgba(255,94,122,0.15);border-color:rgba(255,94,122,0.3);color:#ff5e7a" onclick="skipPartner()">⏭️ Find New Partner</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="content-history">
+      <div class="history-panel">
+        <div class="history-header">
+          <div>
+            <h3>Live History</h3>
+            <p>Recent study sessions are shown here automatically.</p>
+          </div>
+          <div id="historyCount" class="history-count">0 sessions</div>
+        </div>
+        <div id="historyList" class="history-list">
+          <div class="history-empty">No recent history yet. Start a match to see live updates.</div>
         </div>
       </div>
     </div>

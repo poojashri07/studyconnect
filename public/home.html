@@ -244,6 +244,88 @@
   .random .special-tag { background: rgba(124,106,255,0.2); color: var(--accent); }
   .doubt .special-tag { background: rgba(0,229,192,0.15); color: var(--accent2); }
 
+  .history-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .history-header h2 {
+    font-size: 18px;
+    margin: 0;
+  }
+
+  .history-header p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .history-count {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .history-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .history-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .history-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .history-subject {
+    color: var(--accent2);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .3px;
+  }
+
+  .history-users {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .history-time {
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .history-empty {
+    color: var(--muted);
+    padding: 32px;
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+    text-align: center;
+    font-size: 13px;
+  }
+
   /* ── START BUTTON ── */
   .start-section {
     position: sticky;
@@ -536,6 +618,19 @@
   </div>
 
   <!-- STICKY START BAR -->
+  <div class="history-section">
+    <div class="history-header">
+      <div>
+        <h2>Live session history</h2>
+        <p>See the latest matches appear instantly while you browse.</p>
+      </div>
+      <div id="historyCount" class="history-count">0 sessions</div>
+    </div>
+    <div id="historyList" class="history-list">
+      <div class="history-empty">No sessions yet. Once students connect, history will show here live.</div>
+    </div>
+  </div>
+
   <div class="start-section">
     <div class="selected-display">
       <div class="sdlbl">SELECTED SUBJECT</div>

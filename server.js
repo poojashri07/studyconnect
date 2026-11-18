@@ -94,14 +94,19 @@ app.post("/logout", (req, res) => {
 
 let onlineUsers = 0
 let waitingUsers = {}   // interest → socket
+let sessionHistory = []
+const MAX_HISTORY_ITEMS = 50
 
 io.on("connection", (socket) => {
   onlineUsers++
   io.emit("online-count", onlineUsers)
+  socket.emit("history-state", sessionHistory)
 
   /* ── MATCH ── */
-  socket.on("find-partner", (interest) => {
-    const key = interest || "Random"
+  socket.on("find-partner", ({ interest, username }) => {
+    socket.username = username || "Anonymous"
+    socket.interest = interest || "Random"
+    const key = socket.interest
     const isOpenMatch = key === "Random" || key === "Quick Doubt"
 
     const tryMatch = (partnerKey) => {
@@ -111,6 +116,17 @@ io.on("connection", (socket) => {
         const room = "room-" + Date.now()
         socket.join(room)
         partner.join(room)
+        const subject = socket.interest === "Random" && partner.interest && partner.interest !== "Random"
+          ? partner.interest
+          : socket.interest
+        const historyItem = {
+          timestamp: new Date().toISOString(),
+          subject,
+          users: [socket.username, partner.username]
+        }
+        sessionHistory.unshift(historyItem)
+        if (sessionHistory.length > MAX_HISTORY_ITEMS) sessionHistory.pop()
+        io.emit("history-state", sessionHistory)
         socket.emit("matched", { room, initiator: true })
         partner.emit("matched", { room, initiator: false })
         return true
