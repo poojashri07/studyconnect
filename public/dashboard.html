@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StudyConnect — Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="/socket.io/socket.io.js"></script>
+<script src="config.js"></script>
 <style>
   :root {
     --bg: #07071a;
@@ -757,438 +757,448 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-// ── USER DATA ──
-const userData = JSON.parse(sessionStorage.getItem("user") || '{"username":"Student","interest":"Coding"}')
-const selectedSubject = sessionStorage.getItem("subject") || userData.interest || "Random"
-document.getElementById("userName").textContent = userData.username
-document.getElementById("userAvatar").textContent = userData.username[0].toUpperCase()
-document.getElementById("infoUsername").textContent = userData.username
-document.getElementById("subjectLabel").textContent = selectedSubject
+// Load socket.io dynamically from config
+const script = document.createElement('script');
+script.src = window.API_BASE_URL + "/socket.io/socket.io.js";
+script.onload = () => {
+  initDashboard();
+};
+document.head.appendChild(script);
 
-function changeSubject() {
-  if (room) socket.emit("skip", room)
-  if (pc) { pc.close(); pc = null }
-  location.href = "home.html"
-}
+function initDashboard() {
+  // ── USER DATA ──
+  const userData = JSON.parse(sessionStorage.getItem("user") || '{"username":"Student","interest":"Coding"}')
+  const selectedSubject = sessionStorage.getItem("subject") || userData.interest || "Random"
+  document.getElementById("userName").textContent = userData.username
+  document.getElementById("userAvatar").textContent = userData.username[0].toUpperCase()
+  document.getElementById("infoUsername").textContent = userData.username
+  document.getElementById("subjectLabel").textContent = selectedSubject
 
-
-// ── SOCKET ──
-const socket = io()
-let room = null
-let localStream = null
-let pc = null
-let sessionStart = null
-let sessionTimerInterval = null
-
-// ── VIDEO ELEMENTS ──
-const localVideo = document.getElementById("localVideo")
-const remoteVideo = document.getElementById("remoteVideo")
-
-// ── STATE FLAGS ──
-let micOn = true, camOn = true, spkOn = true
-
-// ── START CAMERA ──
-async function startCamera() {
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    localVideo.srcObject = localStream
-    setStatus("Looking for partner...", "searching")
-    socket.emit("find-partner", selectedSubject)
-  } catch (err) {
-    showToast("⚠️ Camera/mic access denied. Some features may not work.", "warning")
-    setStatus("No camera access", "searching")
-    socket.emit("find-partner", selectedSubject)
-  }
-}
-
-startCamera()
-
-// ── MATCH ──
-socket.on("waiting", () => {
-  setStatus("Waiting for a partner...", "searching")
-  document.getElementById("waitingText").textContent = "Waiting for a study partner..."
-})
-
-socket.on("matched", ({ room: r, initiator }) => {
-  room = r
-  document.getElementById("waitingOverlay").style.display = "none"
-  setStatus("Connected 🎉", "connected")
-  document.getElementById("partnerStatus").textContent = "Connected!"
-  document.getElementById("partnerSub").textContent = "Study session active"
-  startSessionTimer()
-  startCall(initiator)
-  addSystemMsg("🎉 Study partner connected! Say hi!")
-  showToast("🎉 Partner found! Happy studying!", "success")
-})
-
-// ── WEBRTC ──
-function startCall(initiator) {
-  const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] }
-  pc = new RTCPeerConnection(config)
-
-  if (localStream) {
-    localStream.getTracks().forEach(track => pc.addTrack(track, localStream))
+  window.changeSubject = function() {
+    if (room) socket.emit("skip", room)
+    if (pc) { pc.close(); pc = null }
+    location.href = "home.html"
   }
 
-  pc.ontrack = e => { remoteVideo.srcObject = e.streams[0] }
 
-  pc.onicecandidate = e => {
-    if (e.candidate) socket.emit("ice-candidate", { room, candidate: e.candidate })
-  }
+  // ── SOCKET ──
+  const socket = io(window.API_BASE_URL)
+  let room = null
+  let localStream = null
+  let pc = null
+  let sessionStart = null
+  let sessionTimerInterval = null
 
-  if (initiator) {
-    pc.createOffer().then(offer => {
-      pc.setLocalDescription(offer)
-      socket.emit("offer", { room, offer })
-    })
-  }
-}
+  // ── VIDEO ELEMENTS ──
+  const localVideo = document.getElementById("localVideo")
+  const remoteVideo = document.getElementById("remoteVideo")
 
-socket.on("offer", async (offer) => {
-  if (!pc) startCall(false)
-  await pc.setRemoteDescription(offer)
-  const answer = await pc.createAnswer()
-  await pc.setLocalDescription(answer)
-  socket.emit("answer", { room, answer })
-})
+  // ── STATE FLAGS ──
+  let micOn = true, camOn = true, spkOn = true
 
-socket.on("answer", (answer) => pc.setRemoteDescription(answer))
-
-socket.on("ice-candidate", (candidate) => {
-  if (pc) pc.addIceCandidate(candidate).catch(()=>{})
-})
-
-// ── PARTNER LEFT ──
-socket.on("partner-left", () => {
-  addSystemMsg("👋 Partner disconnected. Finding new match...")
-  showToast("Partner disconnected. Searching again...", "warning")
-  setStatus("Finding new partner...", "searching")
-  document.getElementById("waitingOverlay").style.display = "flex"
-  document.getElementById("waitingText").textContent = "Finding another partner..."
-  remoteVideo.srcObject = null
-  room = null
-  if (pc) { pc.close(); pc = null }
-  clearSessionTimer()
-  socket.emit("find-partner", selectedSubject)
-})
-
-// ── CHAT ──
-document.getElementById("msgInput").addEventListener("keypress", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
-  }
-})
-
-function sendMessage() {
-  const input = document.getElementById("msgInput")
-  const text = input.value.trim()
-  if (!text || !room) return
-  socket.emit("chat", { room, message: text })
-  addMsg(text, "sent")
-  input.value = ""
-}
-
-socket.on("chat", text => {
-  addMsg(text, "received")
-  if (document.getElementById("tab-chat").classList.contains("active") === false) {
-    showToast("💬 New message from partner", "")
-  }
-})
-
-function addMsg(text, type) {
-  const msgs = document.getElementById("messages")
-  const div = document.createElement("div")
-  div.className = "msg-bubble " + type
-  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  div.innerHTML = `${text}<div class="msg-time">${time}</div>`
-  msgs.appendChild(div)
-  msgs.scrollTop = msgs.scrollHeight
-}
-
-function addSystemMsg(text) {
-  const msgs = document.getElementById("messages")
-  const div = document.createElement("div")
-  div.className = "system-msg"
-  div.textContent = text
-  msgs.appendChild(div)
-  msgs.scrollTop = msgs.scrollHeight
-}
-
-// ── CONTROLS ──
-function toggleMic() {
-  if (!localStream) return
-  const track = localStream.getAudioTracks()[0]
-  if (!track) return
-  micOn = !micOn
-  track.enabled = micOn
-  const btn = document.getElementById("micBtn")
-  btn.textContent = micOn ? "🎤" : "🔇"
-  btn.classList.toggle("active", !micOn)
-  btn.querySelector(".ctrl-label").textContent = micOn ? "Mic" : "Muted"
-}
-
-function toggleCamera() {
-  if (!localStream) return
-  const track = localStream.getVideoTracks()[0]
-  if (!track) return
-  camOn = !camOn
-  track.enabled = camOn
-  const btn = document.getElementById("camBtn")
-  btn.textContent = camOn ? "📷" : "🚫"
-  btn.classList.toggle("active", !camOn)
-  btn.querySelector(".ctrl-label").textContent = camOn ? "Camera" : "Off"
-}
-
-function toggleSpeaker() {
-  spkOn = !spkOn
-  remoteVideo.muted = !spkOn
-  const btn = document.getElementById("spkBtn")
-  btn.textContent = spkOn ? "🔊" : "🔇"
-  btn.classList.toggle("active", !spkOn)
-}
-
-async function startScreen() {
-  try {
-    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-    if (pc) {
-      const sender = pc.getSenders().find(s => s.track && s.track.kind === "video")
-      if (sender) sender.replaceTrack(screenStream.getVideoTracks()[0])
+  // ── START CAMERA ──
+  async function startCamera() {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      localVideo.srcObject = localStream
+      setStatus("Looking for partner...", "searching")
+      socket.emit("find-partner", selectedSubject)
+    } catch (err) {
+      showToast("⚠️ Camera/mic access denied. Some features may not work.", "warning")
+      setStatus("No camera access", "searching")
+      socket.emit("find-partner", selectedSubject)
     }
-    showToast("🖥️ Screen sharing started", "success")
-    screenStream.getVideoTracks()[0].onended = () => {
-      if (localStream && pc) {
+  }
+
+  startCamera()
+
+  // ── MATCH ──
+  socket.on("waiting", () => {
+    setStatus("Waiting for a partner...", "searching")
+    document.getElementById("waitingText").textContent = "Waiting for a study partner..."
+  })
+
+  socket.on("matched", ({ room: r, initiator }) => {
+    room = r
+    document.getElementById("waitingOverlay").style.display = "none"
+    setStatus("Connected 🎉", "connected")
+    document.getElementById("partnerStatus").textContent = "Connected!"
+    document.getElementById("partnerSub").textContent = "Study session active"
+    startSessionTimer()
+    startCall(initiator)
+    addSystemMsg("🎉 Study partner connected! Say hi!")
+    showToast("🎉 Partner found! Happy studying!", "success")
+  })
+
+  // ── WEBRTC ──
+  function startCall(initiator) {
+    const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] }
+    pc = new RTCPeerConnection(config)
+
+    if (localStream) {
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream))
+    }
+
+    pc.ontrack = e => { remoteVideo.srcObject = e.streams[0] }
+
+    pc.onicecandidate = e => {
+      if (e.candidate) socket.emit("ice-candidate", { room, candidate: e.candidate })
+    }
+
+    if (initiator) {
+      pc.createOffer().then(offer => {
+        pc.setLocalDescription(offer)
+        socket.emit("offer", { room, offer })
+      })
+    }
+  }
+
+  socket.on("offer", async (offer) => {
+    if (!pc) startCall(false)
+    await pc.setRemoteDescription(offer)
+    const answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+    socket.emit("answer", { room, answer })
+  })
+
+  socket.on("answer", (answer) => pc.setRemoteDescription(answer))
+
+  socket.on("ice-candidate", (candidate) => {
+    if (pc) pc.addIceCandidate(candidate).catch(()=>{})
+  })
+
+  // ── PARTNER LEFT ──
+  socket.on("partner-left", () => {
+    addSystemMsg("👋 Partner disconnected. Finding new match...")
+    showToast("Partner disconnected. Searching again...", "warning")
+    setStatus("Finding new partner...", "searching")
+    document.getElementById("waitingOverlay").style.display = "flex"
+    document.getElementById("waitingText").textContent = "Finding another partner..."
+    remoteVideo.srcObject = null
+    room = null
+    if (pc) { pc.close(); pc = null }
+    clearSessionTimer()
+    socket.emit("find-partner", selectedSubject)
+  })
+
+  // ── CHAT ──
+  document.getElementById("msgInput").addEventListener("keypress", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  })
+
+  window.sendMessage = function() {
+    const input = document.getElementById("msgInput")
+    const text = input.value.trim()
+    if (!text || !room) return
+    socket.emit("chat", { room, message: text })
+    addMsg(text, "sent")
+    input.value = ""
+  }
+
+  socket.on("chat", text => {
+    addMsg(text, "received")
+    if (document.getElementById("tab-chat").classList.contains("active") === false) {
+      showToast("💬 New message from partner", "")
+    }
+  })
+
+  function addMsg(text, type) {
+    const msgs = document.getElementById("messages")
+    const div = document.createElement("div")
+    div.className = "msg-bubble " + type
+    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    div.innerHTML = `${text}<div class="msg-time">${time}</div>`
+    msgs.appendChild(div)
+    msgs.scrollTop = msgs.scrollHeight
+  }
+
+  function addSystemMsg(text) {
+    const msgs = document.getElementById("messages")
+    const div = document.createElement("div")
+    div.className = "system-msg"
+    div.textContent = text
+    msgs.appendChild(div)
+    msgs.scrollTop = msgs.scrollHeight
+  }
+
+  // ── CONTROLS ──
+  window.toggleMic = function() {
+    if (!localStream) return
+    const track = localStream.getAudioTracks()[0]
+    if (!track) return
+    micOn = !micOn
+    track.enabled = micOn
+    const btn = document.getElementById("micBtn")
+    btn.textContent = micOn ? "🎤" : "🔇"
+    btn.classList.toggle("active", !micOn)
+    btn.querySelector(".ctrl-label").textContent = micOn ? "Mic" : "Muted"
+  }
+
+  window.toggleCamera = function() {
+    if (!localStream) return
+    const track = localStream.getVideoTracks()[0]
+    if (!track) return
+    camOn = !camOn
+    track.enabled = camOn
+    const btn = document.getElementById("camBtn")
+    btn.textContent = camOn ? "📷" : "🚫"
+    btn.classList.toggle("active", !camOn)
+    btn.querySelector(".ctrl-label").textContent = camOn ? "Camera" : "Off"
+  }
+
+  window.toggleSpeaker = function() {
+    spkOn = !spkOn
+    remoteVideo.muted = !spkOn
+    const btn = document.getElementById("spkBtn")
+    btn.textContent = spkOn ? "🔊" : "🔇"
+    btn.classList.toggle("active", !spkOn)
+  }
+
+  window.startScreen = async function() {
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      if (pc) {
         const sender = pc.getSenders().find(s => s.track && s.track.kind === "video")
-        if (sender && localStream.getVideoTracks()[0]) sender.replaceTrack(localStream.getVideoTracks()[0])
+        if (sender) sender.replaceTrack(screenStream.getVideoTracks()[0])
       }
-      showToast("Screen sharing stopped", "")
+      showToast("🖥️ Screen sharing started", "success")
+      screenStream.getVideoTracks()[0].onended = () => {
+        if (localStream && pc) {
+          const sender = pc.getSenders().find(s => s.track && s.track.kind === "video")
+          if (sender && localStream.getVideoTracks()[0]) sender.replaceTrack(localStream.getVideoTracks()[0])
+        }
+        showToast("Screen sharing stopped", "")
+      }
+    } catch (e) {
+      showToast("Screen share cancelled or failed", "warning")
     }
-  } catch (e) {
-    showToast("Screen share cancelled or failed", "warning")
   }
-}
 
-function skipPartner() {
-  if (room) socket.emit("skip", room)
-  remoteVideo.srcObject = null
-  room = null
-  if (pc) { pc.close(); pc = null }
-  clearSessionTimer()
-  document.getElementById("waitingOverlay").style.display = "flex"
-  document.getElementById("waitingText").textContent = "Finding another partner..."
-  setStatus("Searching...", "searching")
-  document.getElementById("partnerStatus").textContent = "Looking for partner..."
-  document.getElementById("partnerSub").textContent = "—"
-  socket.emit("find-partner", selectedSubject)
-}
-
-// ── TABS ──
-function switchTab(name) {
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"))
-  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"))
-  document.getElementById("tab-" + name).classList.add("active")
-  document.getElementById("content-" + name).classList.add("active")
-}
-
-// ── STATUS ──
-function setStatus(text, state) {
-  document.getElementById("statusText").textContent = text
-  const badge = document.getElementById("connectionBadge")
-  badge.style.background = state === "connected"
-    ? "rgba(0,229,192,0.1)" : "rgba(255,184,0,0.08)"
-  badge.style.borderColor = state === "connected"
-    ? "rgba(0,229,192,0.25)" : "rgba(255,184,0,0.2)"
-}
-
-// ── ONLINE COUNT ──
-socket.on("online-count", n => {
-  document.getElementById("onlineCount").textContent = n + " Online"
-})
-
-// ── SESSION TIMER ──
-function startSessionTimer() {
-  sessionStart = Date.now()
-  sessionTimerInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - sessionStart) / 1000)
-    const m = String(Math.floor(elapsed / 60)).padStart(2, "0")
-    const s = String(elapsed % 60).padStart(2, "0")
-    document.getElementById("sessionTimer").textContent = m + ":" + s
-  }, 1000)
-}
-
-function clearSessionTimer() {
-  clearInterval(sessionTimerInterval)
-  document.getElementById("sessionTimer").textContent = "00:00"
-}
-
-// ── TOASTS ──
-function showToast(text, type) {
-  const container = document.getElementById("toastContainer")
-  const toast = document.createElement("div")
-  toast.className = "toast " + type
-  toast.textContent = text
-  container.appendChild(toast)
-  setTimeout(() => {
-    toast.style.animation = "fadeOut 0.3s ease forwards"
-    setTimeout(() => toast.remove(), 300)
-  }, 3500)
-}
-
-// ── LOGOUT ──
-function confirmLogout() {
-  if (confirm("Leave StudyConnect? Your current session will end.")) {
-    fetch("/logout", { method: "POST" })
-    sessionStorage.clear()
-    location.href = "index.html"
+  window.skipPartner = function() {
+    if (room) socket.emit("skip", room)
+    remoteVideo.srcObject = null
+    room = null
+    if (pc) { pc.close(); pc = null }
+    clearSessionTimer()
+    document.getElementById("waitingOverlay").style.display = "flex"
+    document.getElementById("waitingText").textContent = "Finding another partner..."
+    setStatus("Searching...", "searching")
+    document.getElementById("partnerStatus").textContent = "Looking for partner..."
+    document.getElementById("partnerSub").textContent = "—"
+    socket.emit("find-partner", selectedSubject)
   }
-}
 
-// ── DRAG LOCAL VIDEO ──
-let dragging = false, dragOX, dragOY
-
-localVideo.addEventListener("mousedown", e => {
-  dragging = true
-  dragOX = e.offsetX; dragOY = e.offsetY
-  e.preventDefault()
-})
-
-document.addEventListener("mousemove", e => {
-  if (!dragging) return
-  const area = document.getElementById("videoArea")
-  const rect = area.getBoundingClientRect()
-  localVideo.style.left = (e.clientX - rect.left - dragOX) + "px"
-  localVideo.style.top = (e.clientY - rect.top - dragOY) + "px"
-  localVideo.style.right = "auto"
-  localVideo.style.bottom = "auto"
-})
-
-document.addEventListener("mouseup", () => { dragging = false })
-
-// ────────────────────────────────────────────
-//  WHITEBOARD
-// ────────────────────────────────────────────
-const wbOverlay = document.getElementById("whiteboardOverlay")
-const wbCanvas = document.getElementById("whiteboardCanvas")
-const wbCtx = wbCanvas.getContext("2d")
-let wbOpen = false
-let wbTool = "draw"
-let wbColor = "#000"
-let wbSize = 4
-let wbDrawing = false
-let lastX = 0, lastY = 0
-
-function resizeCanvas() {
-  const imgData = wbCtx.getImageData(0, 0, wbCanvas.width, wbCanvas.height)
-  wbCanvas.width = wbOverlay.clientWidth
-  wbCanvas.height = wbOverlay.clientHeight - 52
-  wbCtx.putImageData(imgData, 0, 0)
-}
-
-function toggleWhiteboard() {
-  wbOpen = !wbOpen
-  wbOverlay.classList.toggle("open", wbOpen)
-  document.getElementById("wbBtn").classList.toggle("on", wbOpen)
-  if (wbOpen) {
-    setTimeout(resizeCanvas, 50)
+  // ── TABS ──
+  window.switchTab = function(name) {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"))
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"))
+    document.getElementById("tab-" + name).classList.add("active")
+    document.getElementById("content-" + name).classList.add("active")
   }
-}
 
-window.addEventListener("resize", () => { if (wbOpen) resizeCanvas() })
+  // ── STATUS ──
+  function setStatus(text, state) {
+    document.getElementById("statusText").textContent = text
+    const badge = document.getElementById("connectionBadge")
+    badge.style.background = state === "connected"
+      ? "rgba(0,229,192,0.1)" : "rgba(255,184,0,0.08)"
+    badge.style.borderColor = state === "connected"
+      ? "rgba(0,229,192,0.25)" : "rgba(255,184,0,0.2)"
+  }
 
-function setTool(t) {
-  wbTool = t
-  document.querySelectorAll("[id$='Tool']").forEach(b => b.classList.remove("active"))
-  document.getElementById(t + "Tool").classList.add("active")
-}
+  // ── ONLINE COUNT ──
+  socket.on("online-count", n => {
+    document.getElementById("onlineCount").textContent = n + " Online"
+  })
 
-function setColor(c) {
-  wbColor = c
-  document.querySelectorAll(".wb-color").forEach(el => el.classList.remove("selected"))
-  event.target.classList.add("selected")
-}
+  // ── SESSION TIMER ──
+  function startSessionTimer() {
+    sessionStart = Date.now()
+    sessionTimerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - sessionStart) / 1000)
+      const m = String(Math.floor(elapsed / 60)).padStart(2, "0")
+      const s = String(elapsed % 60).padStart(2, "0")
+      document.getElementById("sessionTimer").textContent = m + ":" + s
+    }, 1000)
+  }
 
-document.getElementById("brushSize").addEventListener("input", e => {
-  wbSize = parseInt(e.target.value)
-})
+  function clearSessionTimer() {
+    clearInterval(sessionTimerInterval)
+    document.getElementById("sessionTimer").textContent = "00:00"
+  }
 
-function clearBoard() {
-  wbCtx.clearRect(0, 0, wbCanvas.width, wbCanvas.height)
-  if (room) socket.emit("clear-board", { room })
-}
+  // ── TOASTS ──
+  function showToast(text, type) {
+    const container = document.getElementById("toastContainer")
+    const toast = document.createElement("div")
+    toast.className = "toast " + type
+    toast.textContent = text
+    container.appendChild(toast)
+    setTimeout(() => {
+      toast.style.animation = "fadeOut 0.3s ease forwards"
+      setTimeout(() => toast.remove(), 300)
+    }, 3500)
+  }
 
-// Draw events
-wbCanvas.addEventListener("mousedown", e => {
-  wbDrawing = true
-  ;[lastX, lastY] = [e.offsetX, e.offsetY]
-  if (wbTool === "text") {
-    const text = prompt("Enter text:")
-    if (text) {
-      wbCtx.fillStyle = wbColor
-      wbCtx.font = `${wbSize * 4 + 12}px DM Sans`
-      wbCtx.fillText(text, e.offsetX, e.offsetY)
-      if (room) socket.emit("draw", { room, type: "text", x: e.offsetX, y: e.offsetY, text, color: wbColor, size: wbSize })
+  // ── LOGOUT ──
+  window.confirmLogout = function() {
+    if (confirm("Leave StudyConnect? Your current session will end.")) {
+      fetch(window.API_BASE_URL + "/logout", { method: "POST" })
+      sessionStorage.clear()
+      location.href = "index.html"
     }
-    wbDrawing = false
   }
-})
 
-wbCanvas.addEventListener("mousemove", e => {
-  if (!wbDrawing || wbTool === "text") return
-  drawLine(lastX, lastY, e.offsetX, e.offsetY, wbColor, wbSize, wbTool === "eraser")
-  if (room) socket.emit("draw", { room, type: "line", x1: lastX, y1: lastY, x2: e.offsetX, y2: e.offsetY, color: wbColor, size: wbSize, eraser: wbTool === "eraser" })
-  ;[lastX, lastY] = [e.offsetX, e.offsetY]
-})
+  // ── DRAG LOCAL VIDEO ──
+  let dragging = false, dragOX, dragOY
 
-wbCanvas.addEventListener("mouseup", () => { wbDrawing = false })
-wbCanvas.addEventListener("mouseleave", () => { wbDrawing = false })
+  localVideo.addEventListener("mousedown", e => {
+    dragging = true
+    dragOX = e.offsetX; dragOY = e.offsetY
+    e.preventDefault()
+  })
 
-// Touch support
-wbCanvas.addEventListener("touchstart", e => {
-  e.preventDefault()
-  const t = e.touches[0]
-  const r = wbCanvas.getBoundingClientRect()
-  wbDrawing = true
-  lastX = t.clientX - r.left; lastY = t.clientY - r.top
-})
+  document.addEventListener("mousemove", e => {
+    if (!dragging) return
+    const area = document.getElementById("videoArea")
+    const rect = area.getBoundingClientRect()
+    localVideo.style.left = (e.clientX - rect.left - dragOX) + "px"
+    localVideo.style.top = (e.clientY - rect.top - dragOY) + "px"
+    localVideo.style.right = "auto"
+    localVideo.style.bottom = "auto"
+  })
 
-wbCanvas.addEventListener("touchmove", e => {
-  e.preventDefault()
-  if (!wbDrawing) return
-  const t = e.touches[0]
-  const r = wbCanvas.getBoundingClientRect()
-  const x = t.clientX - r.left, y = t.clientY - r.top
-  drawLine(lastX, lastY, x, y, wbColor, wbSize, wbTool === "eraser")
-  if (room) socket.emit("draw", { room, type: "line", x1: lastX, y1: lastY, x2: x, y2: y, color: wbColor, size: wbSize, eraser: wbTool === "eraser" })
-  lastX = x; lastY = y
-})
+  document.addEventListener("mouseup", () => { dragging = false })
 
-wbCanvas.addEventListener("touchend", () => { wbDrawing = false })
+  // ────────────────────────────────────────────
+  //  WHITEBOARD
+  // ────────────────────────────────────────────
+  const wbOverlay = document.getElementById("whiteboardOverlay")
+  const wbCanvas = document.getElementById("whiteboardCanvas")
+  const wbCtx = wbCanvas.getContext("2d")
+  let wbOpen = false
+  let wbTool = "draw"
+  let wbColor = "#000"
+  let wbSize = 4
+  let wbDrawing = false
+  let lastX = 0, lastY = 0
 
-function drawLine(x1, y1, x2, y2, color, size, eraser) {
-  wbCtx.beginPath()
-  wbCtx.moveTo(x1, y1)
-  wbCtx.lineTo(x2, y2)
-  wbCtx.strokeStyle = eraser ? "#fff" : color
-  wbCtx.lineWidth = eraser ? size * 4 : size
-  wbCtx.lineCap = "round"
-  wbCtx.lineJoin = "round"
-  wbCtx.stroke()
+  function resizeCanvas() {
+    const imgData = wbCtx.getImageData(0, 0, wbCanvas.width, wbCanvas.height)
+    wbCanvas.width = wbOverlay.clientWidth
+    wbCanvas.height = wbOverlay.clientHeight - 52
+    wbCtx.putImageData(imgData, 0, 0)
+  }
+
+  window.toggleWhiteboard = function() {
+    wbOpen = !wbOpen
+    wbOverlay.classList.toggle("open", wbOpen)
+    document.getElementById("wbBtn").classList.toggle("on", wbOpen)
+    if (wbOpen) {
+      setTimeout(resizeCanvas, 50)
+    }
+  }
+
+  window.addEventListener("resize", () => { if (wbOpen) resizeCanvas() })
+
+  window.setTool = function(t) {
+    wbTool = t
+    document.querySelectorAll("[id$='Tool']").forEach(b => b.classList.remove("active"))
+    document.getElementById(t + "Tool").classList.add("active")
+  }
+
+  window.setColor = function(c) {
+    wbColor = c
+    document.querySelectorAll(".wb-color").forEach(el => el.classList.remove("selected"))
+    event.target.classList.add("selected")
+  }
+
+  document.getElementById("brushSize").addEventListener("input", e => {
+    wbSize = parseInt(e.target.value)
+  })
+
+  window.clearBoard = function() {
+    wbCtx.clearRect(0, 0, wbCanvas.width, wbCanvas.height)
+    if (room) socket.emit("clear-board", { room })
+  }
+
+  // Draw events
+  wbCanvas.addEventListener("mousedown", e => {
+    wbDrawing = true
+    ;[lastX, lastY] = [e.offsetX, e.offsetY]
+    if (wbTool === "text") {
+      const text = prompt("Enter text:")
+      if (text) {
+        wbCtx.fillStyle = wbColor
+        wbCtx.font = `${wbSize * 4 + 12}px DM Sans`
+        wbCtx.fillText(text, e.offsetX, e.offsetY)
+        if (room) socket.emit("draw", { room, type: "text", x: e.offsetX, y: e.offsetY, text, color: wbColor, size: wbSize })
+      }
+      wbDrawing = false
+    }
+  })
+
+  wbCanvas.addEventListener("mousemove", e => {
+    if (!wbDrawing || wbTool === "text") return
+    drawLine(lastX, lastY, e.offsetX, e.offsetY, wbColor, wbSize, wbTool === "eraser")
+    if (room) socket.emit("draw", { room, type: "line", x1: lastX, y1: lastY, x2: e.offsetX, y2: e.offsetY, color: wbColor, size: wbSize, eraser: wbTool === "eraser" })
+    ;[lastX, lastY] = [e.offsetX, e.offsetY]
+  })
+
+  wbCanvas.addEventListener("mouseup", () => { wbDrawing = false })
+  wbCanvas.addEventListener("mouseleave", () => { wbDrawing = false })
+
+  // Touch support
+  wbCanvas.addEventListener("touchstart", e => {
+    e.preventDefault()
+    const t = e.touches[0]
+    const r = wbCanvas.getBoundingClientRect()
+    wbDrawing = true
+    lastX = t.clientX - r.left; lastY = t.clientY - r.top
+  })
+
+  wbCanvas.addEventListener("touchmove", e => {
+    e.preventDefault()
+    if (!wbDrawing) return
+    const t = e.touches[0]
+    const r = wbCanvas.getBoundingClientRect()
+    const x = t.clientX - r.left, y = t.clientY - r.top
+    drawLine(lastX, lastY, x, y, wbColor, wbSize, wbTool === "eraser")
+    if (room) socket.emit("draw", { room, type: "line", x1: lastX, y1: lastY, x2: x, y2: y, color: wbColor, size: wbSize, eraser: wbTool === "eraser" })
+    lastX = x; lastY = y
+  })
+
+  wbCanvas.addEventListener("touchend", () => { wbDrawing = false })
+
+  function drawLine(x1, y1, x2, y2, color, size, eraser) {
+    wbCtx.beginPath()
+    wbCtx.moveTo(x1, y1)
+    wbCtx.lineTo(x2, y2)
+    wbCtx.strokeStyle = eraser ? "#fff" : color
+    wbCtx.lineWidth = eraser ? size * 4 : size
+    wbCtx.lineCap = "round"
+    wbCtx.lineJoin = "round"
+    wbCtx.stroke()
+  }
+
+  // Receive draw from partner
+  socket.on("draw", data => {
+    if (data.type === "line") {
+      drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.size, data.eraser)
+    } else if (data.type === "text") {
+      wbCtx.fillStyle = data.color
+      wbCtx.font = `${data.size * 4 + 12}px DM Sans`
+      wbCtx.fillText(data.text, data.x, data.y)
+    }
+  })
+
+  socket.on("clear-board", () => {
+    wbCtx.clearRect(0, 0, wbCanvas.width, wbCanvas.height)
+  })
 }
-
-// Receive draw from partner
-socket.on("draw", data => {
-  if (data.type === "line") {
-    drawLine(data.x1, data.y1, data.x2, data.y2, data.color, data.size, data.eraser)
-  } else if (data.type === "text") {
-    wbCtx.fillStyle = data.color
-    wbCtx.font = `${data.size * 4 + 12}px DM Sans`
-    wbCtx.fillText(data.text, data.x, data.y)
-  }
-})
-
-socket.on("clear-board", () => {
-  wbCtx.clearRect(0, 0, wbCanvas.width, wbCanvas.height)
-})
 </script>
 </body>
 </html>

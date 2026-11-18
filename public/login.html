@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign In — StudyConnect</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="config.js"></script>
 <style>
   :root {
     --bg: #060612;
@@ -286,7 +287,7 @@
     btn.classList.add("loading")
     btn.textContent = "Signing in..."
 
-    const res = await fetch("/login", {
+    const res = await fetch(window.API_BASE_URL + "/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })

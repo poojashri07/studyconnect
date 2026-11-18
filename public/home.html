@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StudyConnect — Home</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="config.js"></script>
 <style>
   :root {
     --bg: #060612;
@@ -547,67 +548,76 @@
 
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
-  // Load user
-  const userData = JSON.parse(sessionStorage.getItem("user") || '{}')
-  if (!userData.username) { location.href = "login.html" }
+  // Load socket.io dynamically from config
+  const script = document.createElement('script');
+  script.src = window.API_BASE_URL + "/socket.io/socket.io.js";
+  script.onload = () => {
+    initApp();
+  };
+  document.head.appendChild(script);
 
-  const username = userData.username || "Student"
-  document.getElementById("greetName").textContent = username
-  document.getElementById("topName").textContent = username
-  document.getElementById("topAvatar").textContent = username[0].toUpperCase()
+  function initApp() {
+    // Load user
+    const userData = JSON.parse(sessionStorage.getItem("user") || '{}')
+    if (!userData.username) { location.href = "login.html" }
 
-  // Online count
-  const socket = io()
-  socket.on("online-count", n => {
-    document.getElementById("onlineCount").textContent = n + " Online"
-    document.getElementById("statOnline").textContent = n
-  })
+    const username = userData.username || "Student"
+    document.getElementById("greetName").textContent = username
+    document.getElementById("topName").textContent = username
+    document.getElementById("topAvatar").textContent = username[0].toUpperCase()
 
-  // Subject selection
-  let selectedSubject = null
+    // Online count
+    const socket = io(window.API_BASE_URL)
+    socket.on("online-count", n => {
+      document.getElementById("onlineCount").textContent = n + " Online"
+      document.getElementById("statOnline").textContent = n
+    })
 
-  function selectSubject(card, subject) {
-    // Deselect all
-    document.querySelectorAll(".subject-card").forEach(c => c.classList.remove("selected"))
-    document.querySelectorAll(".special-card").forEach(c => c.classList.remove("selected"))
+    // Subject selection
+    let selectedSubject = null
 
-    card.classList.add("selected")
-    selectedSubject = subject
+    window.selectSubject = function(card, subject) {
+      // Deselect all
+      document.querySelectorAll(".subject-card").forEach(c => c.classList.remove("selected"))
+      document.querySelectorAll(".special-card").forEach(c => c.classList.remove("selected"))
 
-    document.getElementById("selectedDisplay").textContent = subject
-    document.getElementById("selectedDisplay").classList.remove("empty")
-    document.getElementById("startBtn").disabled = false
-  }
+      card.classList.add("selected")
+      selectedSubject = subject
 
-  function selectSpecial(type) {
-    document.querySelectorAll(".subject-card").forEach(c => c.classList.remove("selected"))
-    document.querySelectorAll(".special-card").forEach(c => c.classList.remove("selected"))
-
-    event.currentTarget.classList.add("selected")
-
-    if (type === "random") {
-      selectedSubject = "Random"
-      document.getElementById("selectedDisplay").textContent = "🎲 Random Match — any subject"
-    } else {
-      selectedSubject = "Quick Doubt"
-      document.getElementById("selectedDisplay").textContent = "❓ Quick Doubt — open to all"
+      document.getElementById("selectedDisplay").textContent = subject
+      document.getElementById("selectedDisplay").classList.remove("empty")
+      document.getElementById("startBtn").disabled = false
     }
-    document.getElementById("selectedDisplay").classList.remove("empty")
-    document.getElementById("startBtn").disabled = false
-  }
 
-  function startSession() {
-    if (!selectedSubject) return
-    sessionStorage.setItem("subject", selectedSubject)
-    location.href = "dashboard.html"
-  }
+    window.selectSpecial = function(type) {
+      document.querySelectorAll(".subject-card").forEach(c => c.classList.remove("selected"))
+      document.querySelectorAll(".special-card").forEach(c => c.classList.remove("selected"))
 
-  function logout() {
-    fetch("/logout", { method: "POST" })
-    sessionStorage.clear()
-    location.href = "index.html"
+      event.currentTarget.classList.add("selected")
+
+      if (type === "random") {
+        selectedSubject = "Random"
+        document.getElementById("selectedDisplay").textContent = "🎲 Random Match — any subject"
+      } else {
+        selectedSubject = "Quick Doubt"
+        document.getElementById("selectedDisplay").textContent = "❓ Quick Doubt — open to all"
+      }
+      document.getElementById("selectedDisplay").classList.remove("empty")
+      document.getElementById("startBtn").disabled = false
+    }
+
+    window.startSession = function() {
+      if (!selectedSubject) return
+      sessionStorage.setItem("subject", selectedSubject)
+      location.href = "dashboard.html"
+    }
+
+    window.logout = function() {
+      fetch(window.API_BASE_URL + "/logout", { method: "POST" })
+      sessionStorage.clear()
+      location.href = "index.html"
+    }
   }
 </script>
 </body>
